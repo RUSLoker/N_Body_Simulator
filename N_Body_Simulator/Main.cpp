@@ -26,6 +26,7 @@ int comp = 0;
 int depth = 0;
 bool useBH = useBH_default;
 bool centrilize = centrilize_default;
+volatile bool ended = false;
 
 
 void calculateForces() {
@@ -111,6 +112,7 @@ void compute() {
         }
     }
     rec.close();
+    ended = true;
 }
 
 int main() {
@@ -156,6 +158,7 @@ int main() {
             switch (event.type) {
             case Event::Closed:
                 run = false;
+                while (!ended);
                 window.close();
                 break;
             case Event::MouseWheelMoved:
