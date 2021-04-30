@@ -19,7 +19,13 @@ mono_crash.*
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
-[Rr]elease/
+
+**/[Rr]elease/*
+![Rr]elease/sfml-audio-2.dll
+![Rr]elease/sfml-graphics-2.dll
+![Rr]elease/sfml-network-2.dll
+![Rr]elease/sfml-system-2.dll
+![Rr]elease/sfml-window-2.dll
 [Rr]eleases/
 x64/
 x86/
