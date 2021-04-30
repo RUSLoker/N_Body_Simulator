@@ -27,6 +27,7 @@ int depth = 0;
 bool useBH = useBH_default;
 bool centrilize = centrilize_default;
 volatile bool ended = false;
+volatile bool cptr_loaded = false;
 
 
 void calculateForces() {
@@ -39,8 +40,8 @@ void calculateForces() {
                 double r[] = { points[j][0] - points[i][0], points[j][1] - points[i][1] };
                 double mr = sqrt(r[0] * r[0] + r[1] * r[1]);
                 if (mr < 0.000001) mr = 0.000001;
-                double t1 = masses[j] / mr / mr / mr * G;
-                double t2 = masses[j] / mr / mr / mr / mr / mr / mr / mr / mr / mr / mr / mr / mr / mr / mr * K;
+                double t1 = masses[j] / pow(mr, 3) * G;
+                double t2 = masses[j] / pow(mr, 14) * K;
                 ca[0] += t1 * r[0];
                 ca[1] += t1 * r[1];
                 ca[0] -= t2 * r[0];
@@ -70,9 +71,15 @@ void calculateForces() {
 void compute() {
     auto start = std::chrono::system_clock::now();
     double updates = 0;
-    ofstream rec("record.rcd", ios::binary | ios::out);
+    ofstream rec;
     if(record)
-        rec << N << DeltaT << sizeof(points);
+        if (cptr_loaded) {
+            rec.open("record.rcd", ios::binary | ios::out | ios_base::app);
+        }
+        else {
+            rec.open("record.rcd", ios::binary | ios::out);
+            rec << N << DeltaT << sizeof(points);
+        }
     while (run) {
         if (useBH) {
             double maxD = 0;
@@ -112,6 +119,8 @@ void compute() {
         }
     }
     rec.close();
+    ofstream cptr("capture.cptr", ios::binary | ios::out);
+    cptr << points << vels << masses;
     ended = true;
 }
 
@@ -124,20 +133,36 @@ int main() {
     auto start = std::chrono::system_clock::now();
 
     srand(start.time_since_epoch().count());
-    for (int i = 0; i < N; i++) {
-        points[i][0] = ((double)rand() / RAND_MAX) * W - 0.5 * W;
-        points[i][1] = ((double)rand() / RAND_MAX) * H - 0.5 * H;
-        //vels[i][0] = ((double)rand() / RAND_MAX) * 2 * MAX_START_SPEED - MAX_START_SPEED;
-        //vels[i][1] = ((double)rand() / RAND_MAX) * 2 * MAX_START_SPEED - MAX_START_SPEED;
-        // 
-        //vels[i][0] = points[i][1] * MAX_START_SPEED / sqrt(pow(points[i][1], 2) + pow(points[i][0], 2));
-        //vels[i][1] = -points[i][0] * MAX_START_SPEED / sqrt(pow(points[i][1], 2) + pow(points[i][0], 2));
 
-        vels[i][0] = points[i][1] * MAX_START_SPEED;
-        vels[i][1] = -points[i][0] * MAX_START_SPEED;
-        masses[i] = 100;
-        skip[i] = false;
+    ifstream cptr("capture.cptr", ios::binary | ios::in);
+    
+    unsigned int cptr_s;
+    cptr.seekg(0, cptr._Seekend);
+    cptr_s = cptr.tellg();
+    cptr.seekg(0, cptr._Seekbeg);
+    if (cptr_s == sizeof(points) + sizeof(vels) + sizeof(masses)) {
+        cptr >> points >> vels >> masses;
+        cptr_loaded = true;
     }
+    else {
+        for (int i = 0; i < N; i++) {
+            points[i][0] = ((double)rand() / RAND_MAX) * W - 0.5 * W;
+            points[i][1] = ((double)rand() / RAND_MAX) * H - 0.5 * H;
+            //vels[i][0] = ((double)rand() / RAND_MAX) * 2 * MAX_START_SPEED - MAX_START_SPEED;
+            //vels[i][1] = ((double)rand() / RAND_MAX) * 2 * MAX_START_SPEED - MAX_START_SPEED;
+            // 
+            //vels[i][0] = points[i][1] * MAX_START_SPEED / sqrt(pow(points[i][1], 2) + pow(points[i][0], 2));
+            //vels[i][1] = -points[i][0] * MAX_START_SPEED / sqrt(pow(points[i][1], 2) + pow(points[i][0], 2));
+
+            vels[i][0] = points[i][1] * MAX_START_SPEED;
+            vels[i][1] = -points[i][0] * MAX_START_SPEED;
+            masses[i] = 100;
+            skip[i] = false;
+        }
+    }
+
+    cptr.close();
+
     thread th(compute);
     th.detach();
 
