@@ -1,6 +1,8 @@
 #pragma once
 #include <vector>
 #include <fstream>
+#include <string>
+#include "constants.h"
 
 using namespace std;
 
@@ -40,16 +42,24 @@ private:
 	void calcAccel(double* coords, double* holder);
 };
 
-template <typename T>
-
-std::ofstream& operator<<(std::ofstream& out, const T& data) {
-	out.write((char*)&data, sizeof(data));
-	return out;
-}
-
-template <typename T>
-
-std::ifstream& operator>>(std::ifstream& in, T& data) {
-	in.read((char*)&data, sizeof(data));
-	return in;
+static void readConfig() {
+	ifstream cfg("configuration.cfg");
+	unsigned int cfg_s;
+	cfg.seekg(0, cfg._Seekend);
+	cfg_s = cfg.tellg();
+	cfg.seekg(0, cfg._Seekbeg);
+	vector<bool> config_readed(configN, false);
+	while (cfg) {
+		string s;
+		cfg >> s;
+		if (s == "MAX_START_SPEED:") {
+			cfg >> MAX_START_SPEED;
+			config_readed[0] = true;
+		}
+	}
+	cfg.close();
+	ofstream cfgo("configuration.cfg", ios::app | ios::out);
+	if (!config_readed[0]) {
+		cfgo << "MAX_START_SPEED: " << MAX_START_SPEED << endl;
+	}
 }

@@ -25,9 +25,23 @@ BH_tree tree;
 int comp = 0;
 int depth = 0;
 bool useBH = useBH_default;
-bool centrilize = centrilize_default;
+bool centrilize = false;
 volatile bool ended = false;
 volatile bool cptr_loaded = false;
+
+template <typename T>
+
+std::ofstream& operator<<(std::ofstream& out, const T& data) {
+    out.write((char*)&data, sizeof(data));
+    return out;
+}
+
+template <typename T>
+
+std::ifstream& operator>>(std::ifstream& in, T& data) {
+    in.read((char*)&data, sizeof(data));
+    return in;
+}
 
 
 void calculateForces() {
@@ -133,6 +147,8 @@ int main() {
     auto start = std::chrono::system_clock::now();
 
     srand(start.time_since_epoch().count());
+
+    readConfig();
 
     ifstream cptr("capture.cptr", ios::binary | ios::in);
     
