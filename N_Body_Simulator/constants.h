@@ -13,7 +13,7 @@ static const double scroll_speed = 10;
 static const double min_accel = 0.05;
 static const double max_accel = 1000000000;
 static const double max_dist = 40000 * 40000;
-static const bool useBH_default = true;
-static bool record_default = true;
+static const bool useBH = true;
+static bool record = true;
 
 static const int configN = 3;

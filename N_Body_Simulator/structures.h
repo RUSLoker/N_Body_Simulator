@@ -59,7 +59,7 @@ static void readConfig() {
 			config_readed[0] = true;
 		}
 		else if (s == "RECORD:") {
-			cfg >> record_default;
+			cfg >> record;
 			config_readed[1] = true;
 		}
 		else if (s == "N:") {
@@ -86,7 +86,7 @@ static void readConfig() {
 		cfg << "MAX_START_SPEED: " << MAX_START_SPEED << endl;
 	}
 	if (!config_readed[1]) {
-		cfg << "RECORD: " << record_default << endl;
+		cfg << "RECORD: " << record << endl;
 	}
 	if (!config_readed[2]) {
 		cfg << "N: " << N << endl;
