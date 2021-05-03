@@ -2,7 +2,7 @@
 
 static const unsigned int W = 800;
 static const unsigned int H = 800;
-static const unsigned int N = 5000;
+static unsigned int N = 5000;
 static const double G = 100000;
 static const double K = 1000 * G;
 static const double DeltaT = 0.00001;
@@ -14,6 +14,6 @@ static const double min_accel = 0.05;
 static const double max_accel = 1000000000;
 static const double max_dist = 40000 * 40000;
 static const bool useBH_default = true;
-static const bool record_default = true;
+static bool record_default = true;
 
-static const int configN = 1;
+static const int configN = 2;

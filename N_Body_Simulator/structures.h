@@ -43,7 +43,7 @@ private:
 };
 
 static void readConfig() {
-	ifstream cfg("configuration.cfg");
+	ifstream cfg("config.cfg");
 	unsigned int cfg_s;
 	cfg.seekg(0, cfg._Seekend);
 	cfg_s = cfg.tellg();
@@ -56,10 +56,24 @@ static void readConfig() {
 			cfg >> MAX_START_SPEED;
 			config_readed[0] = true;
 		}
+		else if (s == "RECORD:") {
+			cfg >> record_default;
+			config_readed[1] = true;
+		}
+		else if (s == "N:") {
+			cfg >> N;
+			config_readed[2] = true;
+		}
 	}
 	cfg.close();
-	ofstream cfgo("configuration.cfg", ios::app | ios::out);
+	ofstream cfgo("config.cfg", ios::app | ios::out);
 	if (!config_readed[0]) {
 		cfgo << "MAX_START_SPEED: " << MAX_START_SPEED << endl;
+	}
+	if (!config_readed[1]) {
+		cfgo << "RECORD: " << record_default << endl;
+	}
+	if (!config_readed[2]) {
+		cfgo << "N: " << N << endl;
 	}
 }

@@ -7,15 +7,14 @@
 #include "omp.h"
 #include "constants.h"
 
-
 using namespace sf;
 using namespace std;
 
-bool drawBH = false;
-double points[N][2];
-double vels[N][2];
-double masses[N];
-bool skip[N];
+bool drawBH = true;
+double* points = new double[N * 2];
+double* vels = new double[N * 2];
+double* masses = new double[N];
+bool* skip = new bool[N];
 Uint8 pixels[W * H * 4];
 bool run = true;
 double fps = 0, ups = 0;
@@ -29,20 +28,9 @@ bool centrilize = false;
 volatile bool ended = false;
 volatile bool cptr_loaded = false;
 
-template <typename T>
 
-std::ofstream& operator<<(std::ofstream& out, const T& data) {
-    out.write((char*)&data, sizeof(data));
-    return out;
-}
-
-template <typename T>
-
-std::ifstream& operator>>(std::ifstream& in, T& data) {
-    in.read((char*)&data, sizeof(data));
-    return in;
-}
-
+#define points(i, j) points[i*2 + j]
+#define vels(i, j) vels[i*2 + j]
 
 void calculateForces() {
     if (!useBH) {
@@ -51,7 +39,7 @@ void calculateForces() {
             double ca[] = { 0, 0 };
             for (int j = 0; j < N; j++) {
                 if (i == j) continue;
-                double r[] = { points[j][0] - points[i][0], points[j][1] - points[i][1] };
+                double r[] = { points(j, 0) - points(i, 0), points(j, 1) - points(i, 1) };
                 double mr = sqrt(r[0] * r[0] + r[1] * r[1]);
                 if (mr < 0.000001) mr = 0.000001;
                 double t1 = masses[j] / pow(mr, 3) * G;
@@ -61,8 +49,8 @@ void calculateForces() {
                 ca[0] -= t2 * r[0];
                 ca[1] -= t2 * r[1];
             }
-            vels[i][0] += ca[0] * DeltaT;
-            vels[i][1] += ca[1] * DeltaT;
+            vels(i, 0) += ca[0] * DeltaT;
+            vels(i, 1) += ca[1] * DeltaT;
         }
     }
     else {
@@ -70,10 +58,10 @@ void calculateForces() {
         for (int i = 0; i < N; i++) {
             if (!skip[i]) {
                 double* ca;
-                ca = tree.calcAccel(points[i]);
-                vels[i][0] += ca[0] * DeltaT;
-                vels[i][1] += ca[1] * DeltaT;
-                if (ca[0] * ca[0] + ca[1] * ca[1] < min_accel && points[i][0] * points[i][0] + points[i][1] * points[i][1] > max_dist) {
+                ca = tree.calcAccel(points + i * 2);
+                vels(i, 0) += ca[0] * DeltaT;
+                vels(i, 1) += ca[1] * DeltaT;
+                if (ca[0] * ca[0] + ca[1] * ca[1] < min_accel && points(i, 0) * points(i, 0) + points(i, 1) * points(i, 1) > max_dist) {
                     skip[i] = true;
                 }
                 delete[] ca;
@@ -92,15 +80,15 @@ void compute() {
         }
         else {
             rec.open("record.rcd", ios::binary | ios::out);
-            rec << N << DeltaT << sizeof(points);
+            rec << N << DeltaT << sizeof(double) * N * 2; // the last one is a size of a points array
         }
     while (run) {
         if (useBH) {
             double maxD = 0;
             for (int i = 0; i < N; i++) {
                 if (skip[i]) continue;
-                maxD = abs(points[i][0]) > maxD ? abs(points[i][0]) : maxD;
-                maxD = abs(points[i][1]) > maxD ? abs(points[i][1]) : maxD;
+                maxD = abs(points(i, 0)) > maxD ? abs(points(i, 0)) : maxD;
+                maxD = abs(points(i, 1)) > maxD ? abs(points(i, 1)) : maxD;
             }
             maxD *= 2;
             maxD += 100;
@@ -108,14 +96,14 @@ void compute() {
             tree.setNew(0, 0, maxD);
             for (int i = 0; i < N; i++) {
                 if (skip[i]) continue;
-                tree.add(points[i], masses[i]);
+                tree.add(points + i * 2, masses[i]);
             }
             depth = tree.depth();
         }
         calculateForces();
         for (int i = 0; i < N; i++) {
-            points[i][0] += vels[i][0] * DeltaT;
-            points[i][1] += vels[i][1] * DeltaT;
+            points(i, 0) += vels(i, 0) * DeltaT;
+            points(i, 1) += vels(i, 1) * DeltaT;
         }
         if (record) {
             rec << points;
@@ -134,7 +122,9 @@ void compute() {
     }
     rec.close();
     ofstream cptr("capture.cptr", ios::binary | ios::out);
-    cptr << points << vels << masses;
+    cptr.write((char*)points, sizeof(double) * N * 2);
+    cptr.write((char*)vels, sizeof(double) * N * 2);
+    cptr.write((char*)masses, sizeof(double) * N);
     ended = true;
 }
 
@@ -156,25 +146,30 @@ int main() {
     cptr.seekg(0, cptr._Seekend);
     cptr_s = cptr.tellg();
     cptr.seekg(0, cptr._Seekbeg);
-    if (cptr_s == sizeof(points) + sizeof(vels) + sizeof(masses)) {
-        cptr >> points >> vels >> masses;
+    if (cptr_s == sizeof(double) * N * 5) {
+        cptr.read((char*)points, sizeof(double) * N * 2);
+        cptr.read((char*)vels, sizeof(double) * N * 2);
+        cptr.read((char*)masses, sizeof(double) * N);
         cptr_loaded = true;
     }
     else {
         for (int i = 0; i < N; i++) {
-            points[i][0] = ((double)rand() / RAND_MAX) * W - 0.5 * W;
-            points[i][1] = ((double)rand() / RAND_MAX) * H - 0.5 * H;
+            points(i, 0) = ((double)rand() / RAND_MAX) * W - 0.5 * W;
+            points(i, 1) = ((double)rand() / RAND_MAX) * H - 0.5 * H;
             //vels[i][0] = ((double)rand() / RAND_MAX) * 2 * MAX_START_SPEED - MAX_START_SPEED;
             //vels[i][1] = ((double)rand() / RAND_MAX) * 2 * MAX_START_SPEED - MAX_START_SPEED;
             // 
             //vels[i][0] = points[i][1] * MAX_START_SPEED / sqrt(pow(points[i][1], 2) + pow(points[i][0], 2));
             //vels[i][1] = -points[i][0] * MAX_START_SPEED / sqrt(pow(points[i][1], 2) + pow(points[i][0], 2));
 
-            vels[i][0] = points[i][1] * MAX_START_SPEED;
-            vels[i][1] = -points[i][0] * MAX_START_SPEED;
+            vels(i, 0) = points(i, 1) * MAX_START_SPEED;
+            vels(i, 1) = -points(i, 0) * MAX_START_SPEED;
             masses[i] = 100;
             skip[i] = false;
         }
+    }
+    for (int i = 0; i < N; i++) {
+        skip[i] = false;
     }
 
     cptr.close();
@@ -188,7 +183,9 @@ int main() {
 
     BH_tree* vtree = new BH_tree();
 
-    double point_b[N][2];
+    double* point_b = new double[N * 2];
+
+#define point_b(i, j) point_b[i*2 + j]
 
     while (window.isOpen())
     {
@@ -234,16 +231,16 @@ int main() {
         Sprite sp(tex);
 
         for (int i = 0; i < N; i++) {
-            point_b[i][0] = points[i][0];
-            point_b[i][1] = points[i][1];
+            point_b(i, 0) = points(i, 0);
+            point_b(i, 1) = points(i, 1);
         }
 
         if (drawBH || centrilize) {
             double maxD = 0;
             for (int i = 0; i < N; i++) {
                 if (skip[i]) continue;
-                maxD = abs(point_b[i][0]) > maxD ? abs(point_b[i][0]) : maxD;
-                maxD = abs(point_b[i][1]) > maxD ? abs(point_b[i][1]) : maxD;
+                maxD = abs(point_b(i, 0)) > maxD ? abs(point_b(i, 0)) : maxD;
+                maxD = abs(point_b(i, 1)) > maxD ? abs(point_b(i, 1)) : maxD;
             }
             maxD *= 2;
             maxD += 100;
@@ -252,7 +249,7 @@ int main() {
             vtree->setNew(0, 0, maxD);
             for (int i = 0; i < N; i++) {
                 if (skip[i]) continue;
-                vtree->add(point_b[i], masses[i]);
+                vtree->add(point_b + i * 2, masses[i]);
             }
         }
 
@@ -292,8 +289,8 @@ int main() {
         for (int i = 0; i < W * H * 4; i++) pixels[i] = 0;
 
         for (int i = 0; i < N; i++) {
-            int x = (point_b[i][0] - posX) * scale + 0.5 * W;
-            int y = (point_b[i][1] - posY) * scale + 0.5 * H;
+            int x = (point_b(i, 0) - posX) * scale + 0.5 * W;
+            int y = (point_b(i, 1) - posY) * scale + 0.5 * H;
             if (x >= 0 && x < W && y >= 0 && y < H) {
                 int p = 4 * (y * W + x);
                 pixels[p] = 255;
