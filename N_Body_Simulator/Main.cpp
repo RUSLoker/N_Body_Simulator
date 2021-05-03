@@ -10,7 +10,7 @@
 using namespace sf;
 using namespace std;
 
-bool drawBH = true;
+bool drawBH = false;
 double* points = new double[N * 2];
 double* vels = new double[N * 2];
 double* masses = new double[N];

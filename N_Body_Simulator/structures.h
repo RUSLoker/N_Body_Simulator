@@ -43,7 +43,9 @@ private:
 };
 
 static void readConfig() {
-	ifstream cfg("config.cfg");
+	fstream cfg;
+	cfg.open("config.cfg", ios::in);
+	bool exist = cfg.good();
 	unsigned int cfg_s;
 	cfg.seekg(0, cfg._Seekend);
 	cfg_s = cfg.tellg();
@@ -64,16 +66,32 @@ static void readConfig() {
 			cfg >> N;
 			config_readed[2] = true;
 		}
+		else if (s == "DeltaT:") {
+			cfg >> DeltaT;
+			config_readed[3] = true;
+		}
 	}
 	cfg.close();
-	ofstream cfgo("config.cfg", ios::app | ios::out);
+
+	cfg.open("config.cfg", ios::in);
+	cfg.seekg(-1, cfg._Seekend);
+	char last_ch = 0;
+	cfg.read(&last_ch, sizeof(last_ch));
+	cfg.close();
+
+	cfg.open("config.cfg", ios::out | ios::app);
+	if (last_ch != '\n' && cfg_s > 0 && exist) 
+		cfg << endl;
 	if (!config_readed[0]) {
-		cfgo << "MAX_START_SPEED: " << MAX_START_SPEED << endl;
+		cfg << "MAX_START_SPEED: " << MAX_START_SPEED << endl;
 	}
 	if (!config_readed[1]) {
-		cfgo << "RECORD: " << record_default << endl;
+		cfg << "RECORD: " << record_default << endl;
 	}
 	if (!config_readed[2]) {
-		cfgo << "N: " << N << endl;
+		cfg << "N: " << N << endl;
+	}
+	if (!config_readed[3]) {
+		cfg << "DeltaT: " << DeltaT << endl;
 	}
 }
