@@ -106,7 +106,7 @@ void compute() {
             points(i, 1) += vels(i, 1) * DeltaT;
         }
         if (record) {
-            rec << points;
+            rec.write((char*)points, sizeof(double) * N * 2);
         }
         auto now = chrono::system_clock::now();
         chrono::duration<double> elapsed_seconds = now - start;
