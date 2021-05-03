@@ -11,19 +11,17 @@ using namespace sf;
 using namespace std;
 
 bool drawBH = false;
-double* points = new double[N * 2];
-double* vels = new double[N * 2];
-double* masses = new double[N];
-bool* skip = new bool[N];
+double* points;
+double* vels;
+double* masses;
+bool* skip;
 Uint8 pixels[W * H * 4];
 bool run = true;
 double fps = 0, ups = 0;
 double scale = 1;
-bool record = record_default;
 BH_tree tree;
 int comp = 0;
 int depth = 0;
-bool useBH = useBH_default;
 bool centrilize = false;
 volatile bool ended = false;
 volatile bool cptr_loaded = false;
@@ -44,10 +42,12 @@ void calculateForces() {
                 if (mr < 0.000001) mr = 0.000001;
                 double t1 = masses[j] / pow(mr, 3) * G;
                 double t2 = masses[j] / pow(mr, 14) * K;
-                ca[0] += t1 * r[0];
-                ca[1] += t1 * r[1];
-                ca[0] -= t2 * r[0];
-                ca[1] -= t2 * r[1];
+                if (abs(t1 - t2) < max_accel) {
+                    ca[0] += t1 * r[0];
+                    ca[1] += t1 * r[1];
+                    ca[0] -= t2 * r[0];
+                    ca[1] -= t2 * r[1];
+                }
             }
             vels(i, 0) += ca[0] * DeltaT;
             vels(i, 1) += ca[1] * DeltaT;
@@ -139,6 +139,11 @@ int main() {
     srand(start.time_since_epoch().count());
 
     readConfig();
+
+    points = new double[N * 2];
+    vels = new double[N * 2];
+    masses = new double[N];
+    skip = new bool[N];
 
     ifstream cptr("capture.cptr", ios::binary | ios::in);
     

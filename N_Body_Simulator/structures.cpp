@@ -128,7 +128,7 @@ void BH_tree::calcAccel(double* coords, double* holder) {
 	double cr[] = { center[0] - coords[0], center[1] - coords[1] };
 	double cdist = sqrt(cr[0] * cr[0] + cr[1] * cr[1]);
 	if (cdist < 0.000001) cdist = 0.000001;
-	if (node_width / cdist <= theta && body_mass < 0.) {
+	if (body_mass < 0. && node_width / cdist <= theta) {
 		double t1 = node_mass / pow(cdist, 3) * G;
 		double t2 = node_mass / pow(cdist, 14) * K;
 		if (abs(t1 - t2) < max_accel) {
