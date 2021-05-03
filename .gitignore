@@ -21,14 +21,12 @@ mono_crash.*
 [Dd]ebugPublic/
 
 **/[Rr]elease/*
-![Rr]elease/sfml-audio-2.dll
-![Rr]elease/sfml-graphics-2.dll
-![Rr]elease/sfml-network-2.dll
-![Rr]elease/sfml-system-2.dll
-![Rr]elease/sfml-window-2.dll
+!**/[Rr]elease/sfml-audio-2.dll
+!**/[Rr]elease/sfml-graphics-2.dll
+!**/[Rr]elease/sfml-network-2.dll
+!**/[Rr]elease/sfml-system-2.dll
+!**/[Rr]elease/sfml-window-2.dll
 [Rr]eleases/
-x64/
-x86/
 [Ww][Ii][Nn]32/
 [Aa][Rr][Mm]/
 [Aa][Rr][Mm]64/
