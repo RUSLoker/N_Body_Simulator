@@ -43,7 +43,7 @@ private:
 };
 
 static void readConfig() {
-	ifstream cfg("configuration.cfg");
+	ifstream cfg("config.cfg");
 	unsigned int cfg_s;
 	cfg.seekg(0, cfg._Seekend);
 	cfg_s = cfg.tellg();
@@ -66,7 +66,7 @@ static void readConfig() {
 		}
 	}
 	cfg.close();
-	ofstream cfgo("configuration.cfg", ios::app | ios::out);
+	ofstream cfgo("config.cfg", ios::app | ios::out);
 	if (!config_readed[0]) {
 		cfgo << "MAX_START_SPEED: " << MAX_START_SPEED << endl;
 	}

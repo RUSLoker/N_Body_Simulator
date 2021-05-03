@@ -10,7 +10,7 @@
 using namespace sf;
 using namespace std;
 
-bool drawBH = false;
+bool drawBH = true;
 double* points = new double[N * 2];
 double* vels = new double[N * 2];
 double* masses = new double[N];
@@ -31,21 +31,6 @@ volatile bool cptr_loaded = false;
 
 #define points(i, j) points[i*2 + j]
 #define vels(i, j) vels[i*2 + j]
-
-template <typename T>
-
-std::ofstream& operator<<(std::ofstream& out, const T& data) {
-    out.write((char*)&data, sizeof(data));
-    return out;
-}
-
-template <typename T>
-
-std::ifstream& operator>>(std::ifstream& in, T& data) {
-    in.read((char*)&data, sizeof(data));
-    return in;
-}
-
 
 void calculateForces() {
     if (!useBH) {
@@ -95,7 +80,7 @@ void compute() {
         }
         else {
             rec.open("record.rcd", ios::binary | ios::out);
-            rec << N << DeltaT << sizeof(points);
+            rec << N << DeltaT << sizeof(double) * N * 2; // the last one is a size of a points array
         }
     while (run) {
         if (useBH) {
@@ -137,7 +122,9 @@ void compute() {
     }
     rec.close();
     ofstream cptr("capture.cptr", ios::binary | ios::out);
-    cptr << points << vels << masses;
+    cptr.write((char*)points, sizeof(double) * N * 2);
+    cptr.write((char*)vels, sizeof(double) * N * 2);
+    cptr.write((char*)masses, sizeof(double) * N);
     ended = true;
 }
 
@@ -159,8 +146,10 @@ int main() {
     cptr.seekg(0, cptr._Seekend);
     cptr_s = cptr.tellg();
     cptr.seekg(0, cptr._Seekbeg);
-    if (cptr_s == sizeof(points) + sizeof(vels) + sizeof(masses)) {
-        cptr >> points >> vels >> masses;
+    if (cptr_s == sizeof(double) * N * 5) {
+        cptr.read((char*)points, sizeof(double) * N * 2);
+        cptr.read((char*)vels, sizeof(double) * N * 2);
+        cptr.read((char*)masses, sizeof(double) * N);
         cptr_loaded = true;
     }
     else {
@@ -179,6 +168,9 @@ int main() {
             skip[i] = false;
         }
     }
+    for (int i = 0; i < N; i++) {
+        skip[i] = false;
+    }
 
     cptr.close();
 
@@ -193,7 +185,7 @@ int main() {
 
     double* point_b = new double[N * 2];
 
-#define point_b(i, j) points[i*2 + j]
+#define point_b(i, j) point_b[i*2 + j]
 
     while (window.isOpen())
     {
