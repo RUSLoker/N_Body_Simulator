@@ -127,6 +127,7 @@
       <OpenMPSupport>true</OpenMPSupport>
       <PreprocessorDefinitions>PLATFORM=$(PlatformShortName);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(ProjectDir)libs\$(PlatformShortName)\SFML-2.5.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OmitFramePointers>false</OmitFramePointers>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

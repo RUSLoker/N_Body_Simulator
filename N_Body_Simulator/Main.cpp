@@ -319,10 +319,10 @@ int main() {
         window.draw(sp);
 
         if (drawBH) {
-            vector<BH_tree*> nodes = vtree->getNodes();
+            BH_tree** nodes = vtree->getNodes();
 
-            for (int i = 0; i < nodes.size(); i++) {
-                BH_tree* cur = nodes[i];
+            for (BH_tree** i = nodes; i < nodes + vtree->activeNodeCount(); i++) {
+                BH_tree* cur = *i;
                 float width;
                 if (cur->node_width < FLT_MAX) {
                     width = cur->node_width;
@@ -342,6 +342,7 @@ int main() {
                     window.draw(rect);
                 }
             }
+            delete[] nodes;
         }
 
         window.display();

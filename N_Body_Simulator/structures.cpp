@@ -1,6 +1,5 @@
 #include "structures.h"
 #include "constants.h"
-#include <vector>
 
 using namespace std;
 
@@ -94,16 +93,21 @@ void BH_tree::add(double* coords, double mass) {
 	if (curd + 1 > node_depth) node_depth = curd + 1;
 }
 
-vector<BH_tree*> BH_tree::getNodes() {
-	vector<BH_tree*> nodes;
-	nodes.push_back(this);
+BH_tree** BH_tree::getNodes() {
+	BH_tree** nodes = new BH_tree*[*active_node_count];
+	BH_tree** next = nodes;
+	this->getNodes(&next);
+	return nodes;
+}
+
+void BH_tree::getNodes(BH_tree*** next) {
+	**next = this;
+	(*next)++;
 	if (hasNodes) {
-		for (int i = 0; i < 4; i++) {
-			vector<BH_tree*> cur = children[i].getNodes();
-			nodes.insert(nodes.end(), cur.begin(), cur.end());
+		for (BH_tree* i = children; i < children + 4; i++) {
+			i->getNodes(next);
 		}
 	}
-	return nodes;
 }
 
 BH_tree::~BH_tree() {
@@ -121,14 +125,16 @@ void BH_tree::setNew(double x, double y, double width) {
 }
 
 void BH_tree::clear() {
-	vector<BH_tree*> nodes = getNodes();
-	for (BH_tree* i : nodes) {
-		i->hasNodes = false;
-		i->body_mass = -1;
-		i->node_mass = 0;
-		i->node_depth = 1;
+	BH_tree** nodes;
+	nodes = getNodes();
+	for (BH_tree** i = nodes; i < nodes + (*active_node_count); i++) {
+		(*i)->hasNodes = false;
+		(*i)->body_mass = -1;
+		(*i)->node_mass = 0;
+		(*i)->node_depth = 1;
 	}
 	(*active_node_count) = 0;
+	delete[] nodes;
 }
 
 double* BH_tree::calcAccel(double* coords) {
