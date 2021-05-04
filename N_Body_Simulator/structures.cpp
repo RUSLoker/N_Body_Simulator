@@ -1,3 +1,4 @@
+#pragma once
 #include "structures.h"
 #include "constants.h"
 
@@ -26,7 +27,7 @@ void BH_tree::newNode(BH_tree* cache, BH_tree** next, int* node_counter) {
 }
 
 void BH_tree::add(double* coords, double mass) {
-	int curd = 0;
+	unsigned int curd = 0;
 	node_mass += mass;
 	if (body_mass > 0 && !hasNodes) {
 		if (children == 0) {

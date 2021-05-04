@@ -12,6 +12,11 @@
 	#define MAX_CACHING_NODES_NUM 100000
 #endif
 
+#undef x64
+#undef x86
+
+using namespace std;
+
 static const unsigned int W = 800;
 static const unsigned int H = 800;
 static unsigned int N = 5000;
@@ -24,9 +29,10 @@ static const double theta = 0.3;
 static const double scroll_speed = 10;
 static const double min_accel = 0.05;
 static const double max_accel = 1000000000;
-static const double max_dist = 40000 * 40000;
+static const double max_dist = 40000. * 40000.;
 static const bool useBH = true;
 static bool record = true;
+static int max_cache = 1073741824;
 static int caching_nodes_num = MAX_CACHING_NODES_NUM;
 
-static const int configN = 3;
+static const int configN = 5;

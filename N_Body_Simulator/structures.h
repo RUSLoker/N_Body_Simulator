@@ -2,6 +2,7 @@
 #include <vector>
 #include <fstream>
 #include <string>
+#include <algorithm> 
 #include "constants.h"
 
 using namespace std;
@@ -86,8 +87,39 @@ static void readConfig() {
 			cfg >> DeltaT;
 			config_readed[3] = true;
 		}
+		else if (s == "MAX_CACHE_ALLOC:") {
+			double value;
+			string type;
+			cfg >> value >> type;
+			transform(type.begin(), type.end(), type.begin(), ::toupper);
+			char prep = type[0];
+			if (type[1] == 'B') {
+				switch (prep) {
+				case 'P':
+					value *= 1024;
+				case 'T':
+					value *= 1024;
+				case 'G':
+					value *= 1024;
+				case 'M':
+					value *= 1024;
+				case 'K':
+					value *= 1024;
+					break;
+				}
+				max_cache = (int)value;
+				config_readed[4] = true;
+			}
+		}
 	}
 	cfg.close();
+
+	caching_nodes_num = max_cache / sizeof(BH_tree);
+	if (caching_nodes_num > MAX_CACHING_NODES_NUM) {
+		caching_nodes_num = MAX_CACHING_NODES_NUM;
+		max_cache = caching_nodes_num * sizeof(BH_tree);
+		config_readed[4] = false;
+	}
 
 	cfg.open("config.cfg", ios::in);
 	cfg.seekg(-1, cfg._Seekend);
@@ -110,4 +142,8 @@ static void readConfig() {
 	if (!config_readed[3]) {
 		cfg << "DeltaT: " << DeltaT << endl;
 	}
+	if (!config_readed[4]) {
+		cfg << "MAX_CACHE_ALLOC: " << (double)max_cache / (1 << 20) << " Mb" << endl;
+	}
+	cfg.close();
 }
