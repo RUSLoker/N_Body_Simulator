@@ -4,73 +4,84 @@
 
 using namespace std;
 
-BH_tree::BH_tree(double x, double y, double width) {
-	center[0] = x;
-	center[1] = y;
-	node_width = width;
+BH_tree* BH_tree::newTree() {
+	BH_tree* cache = new BH_tree[8000000];
+	BH_tree** next = new BH_tree * ();
+	*next = cache;
+	int* counter = new int(0);
+	(*next)->newNode(cache, next, counter);
+	cache[0].setNew(0, 0, 100000);
+	return cache;
 }
-BH_tree::BH_tree() :BH_tree(0, 0, 100000) {
 
+void BH_tree::newNode(BH_tree* cache, BH_tree** next, int* node_counter) {
+	hasNodes = false;
+	body_mass = -1;
+	node_mass = 0;
+	node_depth = 1;
+	children = 0;
+	node_cache = cache;
+	next_caching = next;
+	*next_caching = *next_caching + 1;
+	active_node_count = node_counter;
 }
 
 void BH_tree::add(double* coords, double mass) {
 	int curd = 0;
 	node_mass += mass;
 	if (body_mass > 0 && !hasNodes) {
-		if (children[0] == 0) {
-			children[0] = new BH_tree(center[0] - node_width / 4, center[1] - node_width / 4, node_width / 2);
-			children[1] = new BH_tree(center[0] + node_width / 4, center[1] - node_width / 4, node_width / 2);
-			children[2] = new BH_tree(center[0] - node_width / 4, center[1] + node_width / 4, node_width / 2);
-			children[3] = new BH_tree(center[0] + node_width / 4, center[1] + node_width / 4, node_width / 2);
+		if (children == 0) {
+			children = *next_caching;
+			for (BH_tree* i = children; i < children + 4; i++) {
+				i->newNode(node_cache, next_caching, active_node_count);
+			}
 		}
-		else {
-			children[0]->setNew(center[0] - node_width / 4, center[1] - node_width / 4, node_width / 2);
-			children[1]->setNew(center[0] + node_width / 4, center[1] - node_width / 4, node_width / 2);
-			children[2]->setNew(center[0] - node_width / 4, center[1] + node_width / 4, node_width / 2);
-			children[3]->setNew(center[0] + node_width / 4, center[1] + node_width / 4, node_width / 2);
-		}
+		children[0].setNew(center[0] - node_width / 4, center[1] - node_width / 4, node_width / 2);
+		children[1].setNew(center[0] + node_width / 4, center[1] - node_width / 4, node_width / 2);
+		children[2].setNew(center[0] - node_width / 4, center[1] + node_width / 4, node_width / 2);
+		children[3].setNew(center[0] + node_width / 4, center[1] + node_width / 4, node_width / 2);
 		hasNodes = true;
 	}
 	if (hasNodes) {
 		if (coords[0] < center[0] && coords[1] < center[1]) {
-			children[0]->add(coords, mass);
-			curd = children[0]->node_depth;
+			children[0].add(coords, mass);
+			curd = children[0].node_depth;
 			if (curd > node_depth) node_depth = curd;
 		}
 		else if (coords[0] > center[0] && coords[1] < center[1]) {
-			children[1]->add(coords, mass);
-			curd = children[1]->node_depth;
+			children[1].add(coords, mass);
+			curd = children[1].node_depth;
 			if (curd > node_depth) node_depth = curd;
 		}
 		else if (coords[0] < center[0] && coords[1] > center[1]) {
-			children[2]->add(coords, mass);
-			curd = children[2]->node_depth;
+			children[2].add(coords, mass);
+			curd = children[2].node_depth;
 			if (curd > node_depth) node_depth = curd;
 		}
 		else if (coords[0] > center[0] && coords[1] > center[1]) {
-			children[3]->add(coords, mass);
-			curd = children[3]->node_depth;
+			children[3].add(coords, mass);
+			curd = children[3].node_depth;
 			if (curd > node_depth) node_depth = curd;
 		}
 		if (body_mass > 0) {
 			if (body_coords[0] < center[0] && body_coords[1] < center[1]) {
-				children[0]->add(body_coords, body_mass);
-				curd = children[0]->node_depth;
+				children[0].add(body_coords, body_mass);
+				curd = children[0].node_depth;
 				if (curd > node_depth) node_depth = curd;
 			}
 			else if (body_coords[0] > center[0] && body_coords[1] < center[1]) {
-				children[1]->add(body_coords, body_mass);
-				curd = children[1]->node_depth;
+				children[1].add(body_coords, body_mass);
+				curd = children[1].node_depth;
 				if (curd > node_depth) node_depth = curd;
 			}
 			else if (body_coords[0] < center[0] && body_coords[1] > center[1]) {
-				children[2]->add(body_coords, body_mass);
-				curd = children[2]->node_depth;
+				children[2].add(body_coords, body_mass);
+				curd = children[2].node_depth;
 				if (curd > node_depth) node_depth = curd;
 			}
 			else if (body_coords[0] > center[0] && body_coords[1] > center[1]) {
-				children[3]->add(body_coords, body_mass);
-				curd = children[3]->node_depth;
+				children[3].add(body_coords, body_mass);
+				curd = children[3].node_depth;
 				if (curd > node_depth) node_depth = curd;
 			}
 			body_mass = -1;
@@ -88,7 +99,7 @@ vector<BH_tree*> BH_tree::getNodes() {
 	nodes.push_back(this);
 	if (hasNodes) {
 		for (int i = 0; i < 4; i++) {
-			vector<BH_tree*> cur = children[i]->getNodes();
+			vector<BH_tree*> cur = children[i].getNodes();
 			nodes.insert(nodes.end(), cur.begin(), cur.end());
 		}
 	}
@@ -96,8 +107,9 @@ vector<BH_tree*> BH_tree::getNodes() {
 }
 
 BH_tree::~BH_tree() {
-	for (int i = 0; i < 4; i++) {
-		delete children[i];
+	if (this == node_cache) {
+		delete next_caching;
+		delete[] node_cache;
 	}
 }
 
@@ -105,6 +117,7 @@ void BH_tree::setNew(double x, double y, double width) {
 	center[0] = x;
 	center[1] = y;
 	node_width = width;
+	(*active_node_count)++;
 }
 
 void BH_tree::clear() {
@@ -115,6 +128,7 @@ void BH_tree::clear() {
 		i->node_mass = 0;
 		i->node_depth = 1;
 	}
+	(*active_node_count) = 0;
 }
 
 double* BH_tree::calcAccel(double* coords) {
@@ -155,7 +169,7 @@ void BH_tree::calcAccel(double* coords, double* holder) {
 		return;
 	}
 	else if (hasNodes) {
-		for (BH_tree* i : children) {
+		for (BH_tree* i = children; i < children + 4; i++) {
 			if (i->node_mass > 0) {
 				i->calcAccel(coords, holder);
 			}

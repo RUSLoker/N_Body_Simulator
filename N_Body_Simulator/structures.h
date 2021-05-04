@@ -14,11 +14,8 @@ public:
 	double center[2];
 	double node_mass;
 	double node_width;
-	BH_tree* children[4];
+	BH_tree* children;
 	bool hasNodes = false;
-
-	BH_tree(double x, double y, double width);
-	BH_tree();
 
 	void add(double* coords, double mass);
 
@@ -30,14 +27,31 @@ public:
 
 	double* calcAccel(double* coords);
 
+	static BH_tree* newTree();
+
 	~BH_tree();
 
 	unsigned int depth() {
 		return node_depth;
 	}
 
+	int totalNodeCount() {
+		return ((int)*next_caching - (int)node_cache) / sizeof(BH_tree);
+	}	
+	
+	int activeNodeCount() {
+		return *active_node_count;
+	}
+
 private:
 	unsigned int node_depth = 1;
+	BH_tree* node_cache;
+	BH_tree** next_caching;
+	int* active_node_count;
+
+	BH_tree() {};
+
+	void newNode(BH_tree* cache, BH_tree** next, int* node_counter);
 
 	void calcAccel(double* coords, double* holder);
 };

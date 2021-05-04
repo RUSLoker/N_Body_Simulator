@@ -19,12 +19,14 @@ Uint8 pixels[W * H * 4];
 bool run = true;
 double fps = 0, ups = 0;
 double scale = 1;
-BH_tree tree;
+BH_tree* tree;
 int comp = 0;
 int depth = 0;
 bool centrilize = false;
 volatile bool ended = false;
 volatile bool cptr_loaded = false;
+int totalNodes = 0;
+int activeNodes = 0;
 
 
 #define points(i, j) points[i*2 + j]
@@ -58,7 +60,7 @@ void calculateForces() {
         for (int i = 0; i < N; i++) {
             if (!skip[i]) {
                 double* ca;
-                ca = tree.calcAccel(points + i * 2);
+                ca = tree->calcAccel(points + i * 2);
                 vels(i, 0) += ca[0] * DeltaT;
                 vels(i, 1) += ca[1] * DeltaT;
                 if (ca[0] * ca[0] + ca[1] * ca[1] < min_accel && points(i, 0) * points(i, 0) + points(i, 1) * points(i, 1) > max_dist) {
@@ -73,6 +75,7 @@ void calculateForces() {
 void compute() {
     auto start = std::chrono::system_clock::now();
     double updates = 0;
+    tree = BH_tree::newTree();
     ofstream rec;
     if(record)
         if (cptr_loaded) {
@@ -80,7 +83,10 @@ void compute() {
         }
         else {
             rec.open("record.rcd", ios::binary | ios::out);
-            rec << N << DeltaT << sizeof(double) * N * 2; // the last one is a size of a points array
+            rec.write((char*)&N, sizeof(N));
+            rec.write((char*)&DeltaT, sizeof(DeltaT));
+            unsigned int size = sizeof(double) * N * 2;
+            rec.write((char*)&size, sizeof(size));
         }
     while (run) {
         if (useBH) {
@@ -92,13 +98,15 @@ void compute() {
             }
             maxD *= 2;
             maxD += 100;
-            tree.clear();
-            tree.setNew(0, 0, maxD);
+            tree->clear();
+            tree->setNew(0, 0, maxD);
             for (int i = 0; i < N; i++) {
                 if (skip[i]) continue;
-                tree.add(points + i * 2, masses[i]);
+                tree->add(points + i * 2, masses[i]);
             }
-            depth = tree.depth();
+            depth = tree->depth();
+            totalNodes = tree->totalNodeCount();
+            activeNodes = tree->activeNodeCount();
         }
         calculateForces();
         for (int i = 0; i < N; i++) {
@@ -115,6 +123,7 @@ void compute() {
             updates++;
         }
         else {
+            updates++;
             ups = updates / elaps;
             start = now;
             updates = 0;
@@ -179,6 +188,8 @@ int main() {
 
     cptr.close();
 
+    BH_tree* vtree = BH_tree::newTree();
+
     thread th(compute);
     th.detach();
 
@@ -186,7 +197,6 @@ int main() {
 
     double posX = 0, posY = 0;
 
-    BH_tree* vtree = new BH_tree();
 
     double* point_b = new double[N * 2];
 
@@ -235,10 +245,7 @@ int main() {
         tex.create(W, H);
         Sprite sp(tex);
 
-        for (int i = 0; i < N; i++) {
-            point_b(i, 0) = points(i, 0);
-            point_b(i, 1) = points(i, 1);
-        }
+        memcpy(point_b, points, sizeof(double) * N * 2);
 
         if (drawBH || centrilize) {
             double maxD = 0;
@@ -273,11 +280,11 @@ int main() {
             for (int i = 0; i < maxdpt; i++) {
                 int maxM = 0;
                 if (maxMtree->hasNodes) {
-                    BH_tree** start = begin(maxMtree->children);
-                    for (BH_tree** i = start; i < start + 4; i++) {
-                        if ((*i)->node_mass > maxM) {
-                            maxM = (*i)->node_mass;
-                            maxMtree = (*i);
+                    BH_tree* start = maxMtree->children;
+                    for (BH_tree* i = start; i < start + 4; i++) {
+                        if (i->node_mass > maxM) {
+                            maxM = i->node_mass;
+                            maxMtree = i;
                         }
                     }
                 }
@@ -323,15 +330,17 @@ int main() {
                 else {
                     width = FLT_MAX;
                 }
-                RectangleShape rect(Vector2f(width * scale, width * scale));
-                rect.setPosition(Vector2f(W / 2 - (width / 2 - cur->center[0] + posX) * scale, H / 2 - (width / 2 - cur->center[1] + posY) * scale));
-                rect.setFillColor(Color(0, 0, 0, 0));
-                rect.setOutlineThickness(0.3f);
-                rect.setOutlineColor(Color(255, 255, 255, 255));
-                if (cur->body_mass > 0) {
-                    rect.setFillColor(Color(0, 0, 255, 40));
+                if (width * scale >= 1) {
+                    RectangleShape rect(Vector2f(width * scale, width * scale));
+                    rect.setPosition(Vector2f(W / 2 - (width / 2 - cur->center[0] + posX) * scale, H / 2 - (width / 2 - cur->center[1] + posY) * scale));
+                    rect.setFillColor(Color(0, 0, 0, 0));
+                    rect.setOutlineThickness(0.3f);
+                    rect.setOutlineColor(Color(255, 255, 255, 255));
+                    if (cur->body_mass > 0) {
+                        rect.setFillColor(Color(0, 0, 255, 40));
+                    }
+                    window.draw(rect);
                 }
-                window.draw(rect);
             }
         }
 
@@ -344,10 +353,11 @@ int main() {
             frames++;
         }
         else {
+            frames++;
             fps = frames / elaps;
             start = now;
             frames = 0;
         }
-        window.setTitle(to_string(fps) + " / " + to_string(ups) + " / " + to_string(ups * DeltaT) + " / " + to_string(depth));
+        window.setTitle(to_string(fps) + " / " + to_string(ups) + " / " + to_string(ups * DeltaT) + " / " + to_string(depth) + " / " + to_string(totalNodes) + " / " + to_string(activeNodes));
     }
 }
