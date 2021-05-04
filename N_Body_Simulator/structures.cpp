@@ -5,7 +5,7 @@
 using namespace std;
 
 BH_tree* BH_tree::newTree() {
-	BH_tree* cache = new BH_tree[8000000];
+	BH_tree* cache = new BH_tree[caching_nodes_num];
 	BH_tree** next = new BH_tree * ();
 	*next = cache;
 	int* counter = new int(0);
