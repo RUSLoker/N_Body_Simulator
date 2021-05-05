@@ -63,11 +63,6 @@ void Config::readConfig(char* path) {
 	cfg.close();
 
 	caching_nodes_num = max_cache / sizeof(BH_tree);
-	if (caching_nodes_num > MAX_CACHING_NODES_NUM) {
-		caching_nodes_num = MAX_CACHING_NODES_NUM;
-		max_cache = caching_nodes_num * sizeof(BH_tree);
-		config_readed[4] = false;
-	}
 
 	cfg.open("config.cfg", ios::in);
 	cfg.seekg(-1, cfg._Seekend);
