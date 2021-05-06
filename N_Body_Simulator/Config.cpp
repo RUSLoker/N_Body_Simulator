@@ -62,7 +62,7 @@ void Config::readConfig(char* path) {
 	}
 	cfg.close();
 
-	caching_nodes_num = max_cache / sizeof(BH_tree);
+	caching_nodes_num = max_cache / sizeof(BH_tree<CALCULATION_TYPE>);
 
 	cfg.open("config.cfg", ios::in);
 	cfg.seekg(-1, cfg._Seekend);

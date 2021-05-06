@@ -4,10 +4,12 @@
 #include <thread>
 #include <fstream>
 #include "BH_tree.h"
+#include "BH_tree.cpp"
 #include "omp.h"
 #include "constants.h"
 #include "Config.h"
 #include "Simulation.h"
+#include "Simulation.cpp"
 
 using namespace sf;
 using namespace std;
@@ -18,7 +20,7 @@ double scale = 1;
 bool centrilize = false;
 volatile bool cptr_loaded = false;
 Config config;
-Simulation* sim;
+Simulation<CALCULATION_TYPE>* sim;
 
 int main() {
     ContextSettings settings;
@@ -32,11 +34,11 @@ int main() {
 
     config.readConfig("config.cfg");
 
-    BH_tree* vtree = BH_tree::newTree(config);
+    BH_tree<CALCULATION_TYPE>* vtree = BH_tree<CALCULATION_TYPE>::newTree(config);
 
-    sim = new Simulation(config);
+    sim = new Simulation<CALCULATION_TYPE>(config);
 
-    thread th(&Simulation::run, sim);
+    thread th(&Simulation<CALCULATION_TYPE>::run, sim);
     th.detach();
 
     double frames = 0;
@@ -45,7 +47,7 @@ int main() {
 
     Uint8* pixels = new Uint8[config.W * config.H * 4];
 
-    double* point_b = new double[config.N * 2];
+    CALCULATION_TYPE* point_b = new CALCULATION_TYPE[config.N * 2];
 
 #define point_b(i, j) point_b[i*2 + j]
 
@@ -92,10 +94,10 @@ int main() {
         tex.create(config.W, config.H);
         Sprite sp(tex);
 
-        memcpy(point_b, sim->points, sizeof(double) * config.N * 2);
+        memcpy(point_b, sim->points, sizeof(CALCULATION_TYPE) * config.N * 2);
 
         if (drawBH || centrilize) {
-            double maxD = 0;
+            CALCULATION_TYPE maxD = 0;
             for (int i = 0; i < config.N; i++) {
                 if (sim->skip[i]) continue;
                 maxD = abs(point_b(i, 0)) > maxD ? abs(point_b(i, 0)) : maxD;
@@ -113,7 +115,7 @@ int main() {
         }
 
         if (centrilize) {
-            double center[2]{ 0, 0 };
+            CALCULATION_TYPE center[2]{ 0, 0 };
 
             //for (int i = 0; i < N; i++) {
             //    center[0] += point_b[i][0];
@@ -122,13 +124,13 @@ int main() {
             //center[0] /= N;
             //center[1] /= N;
 
-            BH_tree* maxMtree = vtree;
+            BH_tree<CALCULATION_TYPE>* maxMtree = vtree;
             int maxdpt = vtree->depth();
             for (int i = 0; i < maxdpt; i++) {
                 int maxM = 0;
                 if (maxMtree->hasNodes) {
-                    BH_tree* start = maxMtree->children;
-                    for (BH_tree* i = start; i < start + 4; i++) {
+                    BH_tree<CALCULATION_TYPE>* start = maxMtree->children;
+                    for (BH_tree<CALCULATION_TYPE>* i = start; i < start + 4; i++) {
                         if (i->node_mass > maxM) {
                             maxM = i->node_mass;
                             maxMtree = i;
@@ -166,10 +168,10 @@ int main() {
         window.draw(sp);
 
         if (drawBH) {
-            BH_tree** nodes = vtree->getNodes();
+            BH_tree<CALCULATION_TYPE>** nodes = vtree->getNodes();
 
-            for (BH_tree** i = nodes; i < nodes + vtree->activeNodeCount(); i++) {
-                BH_tree* cur = *i;
+            for (BH_tree<CALCULATION_TYPE>** i = nodes; i < nodes + vtree->activeNodeCount(); i++) {
+                BH_tree<CALCULATION_TYPE>* cur = *i;
                 float width;
                 if (cur->node_width < FLT_MAX) {
                     width = cur->node_width;

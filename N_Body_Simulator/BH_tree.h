@@ -4,28 +4,31 @@
 
 using namespace std;
 
+
+template <typename T>
+
 class BH_tree
 {
 public:
-	double* body_coords;
-	double body_mass = -1;
-	double center[2];
-	double node_mass;
-	double node_width;
-	BH_tree* children;
+	T* body_coords;
+	T body_mass = -1;
+	T center[2];
+	T node_mass;
+	T node_width;
+	BH_tree<T>* children;
 	bool hasNodes = false;
 
-	void add(double* coords, double mass);
+	void add(T* coords, T mass);
 
-	void setNew(double x, double y, double width);
+	void setNew(T x, T y, T width);
 
 	void clear();
 
-	BH_tree** getNodes();
+	BH_tree<T>** getNodes();
 
-	double* calcAccel(double* coords);
+	T* calcAccel(T* coords);
 
-	static BH_tree* newTree(Config config);
+	static BH_tree<T>* newTree(Config config);
 
 	~BH_tree();
 
@@ -34,7 +37,7 @@ public:
 	}
 
 	SIZE_TYPE totalNodeCount() {
-		return ((SIZE_TYPE)*next_caching - (SIZE_TYPE)node_cache) / (SIZE_TYPE)sizeof(BH_tree);
+		return ((SIZE_TYPE)*next_caching - (SIZE_TYPE)node_cache) / (SIZE_TYPE)sizeof(BH_tree<T>);
 	}
 
 	SIZE_TYPE activeNodeCount() {
@@ -43,17 +46,16 @@ public:
 
 private:
 	unsigned int node_depth = 1;
-	BH_tree* node_cache;
-	BH_tree** next_caching;
+	BH_tree<T>* node_cache;
+	BH_tree<T>** next_caching;
 	SIZE_TYPE* active_node_count;
 	Config* tree_config;
 
 	BH_tree() {};
 
-	void newNode(BH_tree* cache, BH_tree** next, SIZE_TYPE* node_counter, Config* config);
+	void newNode(BH_tree<T>* cache, BH_tree<T>** next, SIZE_TYPE* node_counter, Config* config);
 
-	void getNodes(BH_tree*** next);
+	void getNodes(BH_tree<T>*** next);
 
-	void calcAccel(double* coords, double* holder);
+	void calcAccel(T* coords, T* holder);
 };
-

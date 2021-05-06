@@ -18,5 +18,7 @@
 #define SIZE_TYPE unsigned int
 #define MAX_CACHING_NODES_NUM 100000
 
+#define CALCULATION_TYPE long double
+
 #undef x64
 #undef x86

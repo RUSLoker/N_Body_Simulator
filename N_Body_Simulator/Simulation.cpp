@@ -7,13 +7,15 @@
 
 using namespace std;
 
-Simulation::Simulation(Config config) {
+template <typename T>
+
+Simulation<T>::Simulation(Config config) {
     this->config = config;
-    points = new double[config.N * 2];
-    vels = new double[config.N * 2];
-    masses = new double[config.N];
+    points = new T[config.N * 2];
+    vels = new T[config.N * 2];
+    masses = new T[config.N];
     skip = new bool[config.N];
-    tree = BH_tree::newTree(config);
+    tree = BH_tree<T>::newTree(config);
 
     ifstream cptr("capture.cptr", ios::binary | ios::in);
 
@@ -25,16 +27,16 @@ Simulation::Simulation(Config config) {
     cptr.seekg(0, cptr._Seekend);
     cptr_s = cptr.tellg();
     cptr.seekg(0, cptr._Seekbeg);
-    if (cptr_s == sizeof(double) * config.N * 5) {
-        cptr.read((char*)points, sizeof(double) * config.N * 2);
-        cptr.read((char*)vels, sizeof(double) * config.N * 2);
-        cptr.read((char*)masses, sizeof(double) * config.N);
+    if (cptr_s == sizeof(T) * config.N * 5) {
+        cptr.read((char*)points, sizeof(T) * config.N * 2);
+        cptr.read((char*)vels, sizeof(T) * config.N * 2);
+        cptr.read((char*)masses, sizeof(T) * config.N);
         cptr_loaded = true;
     }
     else {
         for (int i = 0; i < config.N; i++) {
-            points(i, 0) = ((double)rand() / RAND_MAX) * config.W - 0.5 * config.W;
-            points(i, 1) = ((double)rand() / RAND_MAX) * config.H - 0.5 * config.H;
+            points(i, 0) = ((T)rand() / RAND_MAX) * config.W - 0.5 * config.W;
+            points(i, 1) = ((T)rand() / RAND_MAX) * config.H - 0.5 * config.H;
             //vels[i][0] = ((double)rand() / RAND_MAX) * 2 * MAX_START_SPEED - MAX_START_SPEED;
             //vels[i][1] = ((double)rand() / RAND_MAX) * 2 * MAX_START_SPEED - MAX_START_SPEED;
             // 
@@ -60,18 +62,20 @@ Simulation::Simulation(Config config) {
 #define points(i, j) points[i*2 + j]
 #define vels(i, j) vels[i*2 + j]
 
-void Simulation::calculateForces() {
+template <typename T>
+
+void Simulation<T>::calculateForces() {
     if (!config.useBH) {
 #pragma omp parallel for
         for (int i = 0; i < config.N; i++) {
-            double ca[] = { 0, 0 };
+            T ca[] = { 0, 0 };
             for (int j = 0; j < config.N; j++) {
                 if (i == j) continue;
-                double r[] = { points(j, 0) - points(i, 0), points(j, 1) - points(i, 1) };
-                double mr = sqrt(r[0] * r[0] + r[1] * r[1]);
+                T r[] = { points(j, 0) - points(i, 0), points(j, 1) - points(i, 1) };
+                T mr = sqrt(r[0] * r[0] + r[1] * r[1]);
                 if (mr < 0.000001) mr = 0.000001;
-                double t1 = masses[j] / pow(mr, 3) * config.G;
-                double t2 = masses[j] / pow(mr, 14) * config.K;
+                T t1 = masses[j] / pow(mr, 3) * config.G;
+                T t2 = masses[j] / pow(mr, 14) * config.K;
                 if (abs(t1 - t2) < config.max_accel) {
                     ca[0] += t1 * r[0];
                     ca[1] += t1 * r[1];
@@ -87,7 +91,7 @@ void Simulation::calculateForces() {
 #pragma omp parallel for
         for (int i = 0; i < config.N; i++) {
             if (!skip[i]) {
-                double* ca;
+                T* ca;
                 ca = tree->calcAccel(points + i * 2);
                 vels(i, 0) += ca[0] * config.DeltaT;
                 vels(i, 1) += ca[1] * config.DeltaT;
@@ -102,7 +106,9 @@ void Simulation::calculateForces() {
 
 }
 
-void Simulation::run() {
+template <typename T>
+
+void Simulation<T>::run() {
     auto start = std::chrono::system_clock::now();
     work = true;
     alive = true;
@@ -116,12 +122,12 @@ void Simulation::run() {
             rec.open("record.rcd", ios::binary | ios::out);
             rec.write((char*)&config.N, sizeof(config.N));
             rec.write((char*)&config.DeltaT, sizeof(config.DeltaT));
-            unsigned int size = sizeof(double) * config.N * 2;
+            unsigned int size = sizeof(T) * config.N * 2;
             rec.write((char*)&size, sizeof(size));
         }
     while (work) {
         if (config.useBH) {
-            double maxD = 0;
+            T maxD = 0;
             for (int i = 0; i < config.N; i++) {
                 if (skip[i]) continue;
                 maxD = abs(points(i, 0)) > maxD ? abs(points(i, 0)) : maxD;
@@ -145,7 +151,7 @@ void Simulation::run() {
             points(i, 1) += vels(i, 1) * config.DeltaT;
         }
         if (config.record) {
-            rec.write((char*)points, sizeof(double) * config.N * 2);
+            rec.write((char*)points, sizeof(T) * config.N * 2);
         }
         auto now = chrono::system_clock::now();
         chrono::duration<double> elapsed_seconds = now - start;
@@ -162,9 +168,9 @@ void Simulation::run() {
     }
     rec.close();
     ofstream cptr("capture.cptr", ios::binary | ios::out);
-    cptr.write((char*)points, sizeof(double) * config.N * 2);
-    cptr.write((char*)vels, sizeof(double) * config.N * 2);
-    cptr.write((char*)masses, sizeof(double) * config.N);
+    cptr.write((char*)points, sizeof(T) * config.N * 2);
+    cptr.write((char*)vels, sizeof(T) * config.N * 2);
+    cptr.write((char*)masses, sizeof(T) * config.N);
     cptr.close();
     alive = false;
 }

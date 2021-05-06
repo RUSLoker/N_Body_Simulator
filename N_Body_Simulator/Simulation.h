@@ -5,13 +5,15 @@
 
 using namespace std;
 
+template <typename T>
+
 class Simulation
 {
 public:
 
-	double* points;
-	double* vels;
-	double* masses;
+	T* points;
+	T* vels;
+	T* masses;
 	bool* skip;
 	double ups = 0;
 	volatile bool alive = false;
@@ -30,7 +32,7 @@ public:
 private:
 
 	Config config;
-	BH_tree* tree;
+	BH_tree<T>* tree;
 	bool cptr_loaded;
 	volatile bool work = false;
 
@@ -38,4 +40,3 @@ private:
 
 	void calculateForces();
 };
-
