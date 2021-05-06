@@ -1,66 +1,15 @@
-#pragma once
+#include "Config.h"
+#include "BH_tree.h"
 #include <vector>
 #include <fstream>
 #include <string>
-#include "constants.h"
+#include <algorithm> 
 
 using namespace std;
 
-class BH_tree
-{
-public:
-	double* body_coords;
-	double body_mass = -1;
-	double center[2];
-	double node_mass;
-	double node_width;
-	BH_tree* children;
-	bool hasNodes = false;
-
-	void add(double* coords, double mass);
-
-	void setNew(double x, double y, double width);
-
-	void clear();
-
-	BH_tree** getNodes();
-
-	double* calcAccel(double* coords);
-
-	static BH_tree* newTree();
-
-	~BH_tree();
-
-	unsigned int depth() {
-		return node_depth;
-	}
-
-	int totalNodeCount() {
-		return ((int)*next_caching - (int)node_cache) / sizeof(BH_tree);
-	}	
-	
-	int activeNodeCount() {
-		return *active_node_count;
-	}
-
-private:
-	unsigned int node_depth = 1;
-	BH_tree* node_cache;
-	BH_tree** next_caching;
-	int* active_node_count;
-
-	BH_tree() {};
-
-	void newNode(BH_tree* cache, BH_tree** next, int* node_counter);
-
-	void getNodes(BH_tree*** next);
-
-	void calcAccel(double* coords, double* holder);
-};
-
-static void readConfig() {
+void Config::readConfig(char* path) {
 	fstream cfg;
-	cfg.open("config.cfg", ios::in);
+	cfg.open(path, ios::in);
 	bool exist = cfg.good();
 	unsigned int cfg_s;
 	cfg.seekg(0, cfg._Seekend);
@@ -86,8 +35,34 @@ static void readConfig() {
 			cfg >> DeltaT;
 			config_readed[3] = true;
 		}
+		else if (s == "MAX_CACHE_ALLOC:") {
+			double value;
+			string type;
+			cfg >> value >> type;
+			transform(type.begin(), type.end(), type.begin(), ::toupper);
+			char prep = type[0];
+			if (type[1] == 'B') {
+				switch (prep) {
+				case 'P':
+					value *= 1024;
+				case 'T':
+					value *= 1024;
+				case 'G':
+					value *= 1024;
+				case 'M':
+					value *= 1024;
+				case 'K':
+					value *= 1024;
+					break;
+				}
+				max_cache = (int)value;
+				config_readed[4] = true;
+			}
+		}
 	}
 	cfg.close();
+
+	caching_nodes_num = max_cache / sizeof(BH_tree<CALCULATION_TYPE>);
 
 	cfg.open("config.cfg", ios::in);
 	cfg.seekg(-1, cfg._Seekend);
@@ -96,7 +71,7 @@ static void readConfig() {
 	cfg.close();
 
 	cfg.open("config.cfg", ios::out | ios::app);
-	if (last_ch != '\n' && cfg_s > 0 && exist) 
+	if (last_ch != '\n' && cfg_s > 0 && exist)
 		cfg << endl;
 	if (!config_readed[0]) {
 		cfg << "MAX_START_SPEED: " << MAX_START_SPEED << endl;
@@ -110,4 +85,8 @@ static void readConfig() {
 	if (!config_readed[3]) {
 		cfg << "DeltaT: " << DeltaT << endl;
 	}
+	if (!config_readed[4]) {
+		cfg << "MAX_CACHE_ALLOC: " << (double)max_cache / (1 << 20) << " Mb" << endl;
+	}
+	cfg.close();
 }
