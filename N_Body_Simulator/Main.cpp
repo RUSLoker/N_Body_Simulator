@@ -3,12 +3,10 @@
 #include <ctime>
 #include <thread>
 #include <fstream>
-#include "BH_tree.h"
 #include "BH_tree.cpp"
 #include "omp.h"
 #include "constants.h"
 #include "Config.h"
-#include "Simulation.h"
 #include "Simulation.cpp"
 
 using namespace sf;
@@ -45,7 +43,7 @@ int main() {
 
     double posX = 0, posY = 0;
 
-    Uint8* pixels = new Uint8[config.W * config.H * 4];
+    VertexArray pixels(Points, config.N);
 
     CALCULATION_TYPE* point_b = new CALCULATION_TYPE[config.N * 2];
 
@@ -87,12 +85,15 @@ int main() {
                 if (event.key.code == Keyboard::C) {
                     centrilize = !centrilize;
                 }
+                break;
+            case Event::Resized:
+                Vector2u dims = window.getSize();
+                config.W = dims.x;
+                config.H = dims.y;
+                View newView(Vector2f(config.W/2, config.H/2), Vector2f(config.W, config.H));
+                window.setView(newView);
             }
         }
-
-        Texture tex;
-        tex.create(config.W, config.H);
-        Sprite sp(tex);
 
         memcpy(point_b, sim->points, sizeof(CALCULATION_TYPE) * config.N * 2);
 
@@ -147,25 +148,16 @@ int main() {
             posY = center[1];
         }
 
-        for (int i = 0; i < config.W * config.H * 4; i++) pixels[i] = 0;
-
         for (int i = 0; i < config.N; i++) {
             int x = (point_b(i, 0) - posX) * scale + 0.5 * config.W;
             int y = (point_b(i, 1) - posY) * scale + 0.5 * config.H;
-            if (x >= 0 && x < config.W && y >= 0 && y < config.H) {
-                int p = 4 * (y * config.W + x);
-                pixels[p] = 255;
-                pixels[p + 1] = 255;
-                pixels[p + 2] = 255;
-                pixels[p + 3] = 255;
-                //pixels[p + 3] += pixels[p + 3] + 255 * scale <= 255 ? (int)(255 * scale) : 255;
-            }
+            pixels[i].position = Vector2f(x, y);
+            pixels[i].color = Color(255, 255, 255, 255);
         }
 
-        tex.update(pixels);
-
         window.clear();
-        window.draw(sp);
+        window.draw(pixels);
+
 
         if (drawBH) {
             BH_tree<CALCULATION_TYPE>** nodes = vtree->getNodes();
@@ -198,8 +190,6 @@ int main() {
             delete[] nodes;
         }
 
-        window.display();
-
         auto now = chrono::system_clock::now();
         chrono::duration<double> elapsed_seconds = now - start;
         double elaps = elapsed_seconds.count();
@@ -212,6 +202,9 @@ int main() {
             start = now;
             frames = 0;
         }
+
+
+        window.display();
         window.setTitle(to_string(fps) + " / " + to_string(sim->ups) + " / " + to_string(sim->ups * config.DeltaT) + " / " + to_string(sim->treeDepth) + " / " + to_string(sim->totalTreeNodes) + " / " + to_string(sim->activeTreeNodes));
     }
 }

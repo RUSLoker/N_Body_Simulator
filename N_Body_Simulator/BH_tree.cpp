@@ -171,7 +171,7 @@ void BH_tree<T>::calcAccel(T* coords, T* holder) {
 	if (cdist < 0.000001) cdist = 0.000001;
 	if (body_mass < 0. && node_width / cdist <= tree_config->theta) {
 		T t1 = node_mass / pow(cdist, 3) * tree_config->G;
-		T t2 = node_mass / pow(cdist, 14) * tree_config->K;
+		T t2 = node_mass / pow(cdist + 0.6, 14) * tree_config->K;
 		if (abs(t1 - t2) < tree_config->max_accel) {
 			holder[0] += t1 * cr[0];
 			holder[1] += t1 * cr[1];
@@ -186,7 +186,7 @@ void BH_tree<T>::calcAccel(T* coords, T* holder) {
 		T mr = sqrt(r[0] * r[0] + r[1] * r[1]);
 		if (mr < 0.000001) mr = 0.000001;
 		T t1 = body_mass / pow(mr, 3) * tree_config->G;
-		T t2 = body_mass / pow(mr, 14) * tree_config->K;
+		T t2 = body_mass / pow(mr + 0.6, 14) * tree_config->K;
 		if (abs(t1 - t2) < tree_config->max_accel) {
 			holder[0] += t1 * r[0];
 			holder[1] += t1 * r[1];

@@ -11,9 +11,10 @@ template <typename T>
 
 Simulation<T>::Simulation(Config config) {
     this->config = config;
-    points = new T[config.N * 2];
-    vels = new T[config.N * 2];
-    masses = new T[config.N];
+    T* propsArr = new T[config.N * 5];
+    points = propsArr;
+    vels = propsArr + config.N * 2;
+    masses = propsArr + config.N * 4;
     skip = new bool[config.N];
     tree = BH_tree<T>::newTree(config);
 
@@ -75,7 +76,7 @@ void Simulation<T>::calculateForces() {
                 T mr = sqrt(r[0] * r[0] + r[1] * r[1]);
                 if (mr < 0.000001) mr = 0.000001;
                 T t1 = masses[j] / pow(mr, 3) * config.G;
-                T t2 = masses[j] / pow(mr, 14) * config.K;
+                T t2 = masses[j] / pow(mr + 0.6, 14) * config.K;
                 if (abs(t1 - t2) < config.max_accel) {
                     ca[0] += t1 * r[0];
                     ca[1] += t1 * r[1];
