@@ -24,7 +24,7 @@ public:
 
 	void clear();
 
-	BH_tree<T>** getNodes();
+	BH_tree<T>* getNodes();
 
 	T* calcAccel(T* coords);
 
@@ -54,8 +54,6 @@ private:
 	BH_tree() {};
 
 	void newNode(BH_tree<T>* cache, BH_tree<T>** next, SIZE_TYPE* node_counter, Config* config);
-
-	void getNodes(BH_tree<T>*** next);
 
 	void calcAccel(T* coords, T* holder);
 };

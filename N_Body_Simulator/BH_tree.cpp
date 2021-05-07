@@ -41,6 +41,7 @@ void BH_tree<T>::add(T* coords, T mass) {
 	if (body_mass > 0 && !hasNodes) {
 		if (children == 0) {
 			children = *next_caching;
+
 			for (BH_tree<T>* i = children; i < children + 4; i++) {
 				i->newNode(node_cache, next_caching, active_node_count, tree_config);
 			}
@@ -105,23 +106,8 @@ void BH_tree<T>::add(T* coords, T mass) {
 
 template <typename T>
 
-BH_tree<T>** BH_tree<T>::getNodes() {
-	BH_tree<T>** nodes = new BH_tree<T> * [*active_node_count];
-	BH_tree<T>** next = nodes;
-	this->getNodes(&next);
-	return nodes;
-}
-
-template <typename T>
-
-void BH_tree<T>::getNodes(BH_tree<T>*** next) {
-	**next = this;
-	(*next)++;
-	if (hasNodes) {
-		for (BH_tree<T>* i = children; i < children + 4; i++) {
-			i->getNodes(next);
-		}
-	}
+BH_tree<T>* BH_tree<T>::getNodes() {
+	return node_cache;
 }
 
 template <typename T>

@@ -21,8 +21,8 @@ public:
 	double max_dist = 40000. * 40000.;
 	bool useBH = true;
 	bool record = true;
-	int max_cache = 1073741824;
-	int caching_nodes_num = MAX_CACHING_NODES_NUM;
+	unsigned int max_cache = 1073741824;
+	unsigned int caching_nodes_num = MAX_CACHING_NODES_NUM;
 
 	static const int configN = 5;
 
