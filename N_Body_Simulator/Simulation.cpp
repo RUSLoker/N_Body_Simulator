@@ -18,23 +18,25 @@ Simulation<T>::Simulation(Config config) {
     skip = new bool[config.N];
     tree = BH_tree<T>::newTree(config);
 
-    ifstream cptr("capture.cptr", ios::binary | ios::in);
-
 #define points(i, j) points[i*2 + j]
 #define vels(i, j) vels[i*2 + j]
 
     cptr_loaded = false;
-    unsigned int cptr_s;
-    cptr.seekg(0, cptr._Seekend);
-    cptr_s = cptr.tellg();
-    cptr.seekg(0, cptr._Seekbeg);
-    if (cptr_s == sizeof(T) * config.N * 5) {
-        cptr.read((char*)points, sizeof(T) * config.N * 2);
-        cptr.read((char*)vels, sizeof(T) * config.N * 2);
-        cptr.read((char*)masses, sizeof(T) * config.N);
-        cptr_loaded = true;
+    if (config.read_capture) {
+        ifstream cptr(config.capture_path, ios::binary | ios::in);
+        unsigned int cptr_s;
+        cptr.seekg(0, cptr._Seekend);
+        cptr_s = cptr.tellg();
+        cptr.seekg(0, cptr._Seekbeg);
+        if (cptr_s == sizeof(T) * config.N * 5) {
+            cptr.read((char*)points, sizeof(T) * config.N * 2);
+            cptr.read((char*)vels, sizeof(T) * config.N * 2);
+            cptr.read((char*)masses, sizeof(T) * config.N);
+            cptr_loaded = true;
+        }
+        cptr.close();
     }
-    else {
+    if(!cptr_loaded) {
         for (int i = 0; i < config.N; i++) {
             points(i, 0) = ((T)rand() / RAND_MAX) * config.W - 0.5 * config.W;
             points(i, 1) = ((T)rand() / RAND_MAX) * config.H - 0.5 * config.H;
@@ -53,8 +55,6 @@ Simulation<T>::Simulation(Config config) {
     for (int i = 0; i < config.N; i++) {
         skip[i] = false;
     }
-
-    cptr.close();
 
 #undef points
 #undef vels
@@ -118,10 +118,10 @@ void Simulation<T>::run() {
     ofstream rec;
     if (config.record)
         if (cptr_loaded) {
-            rec.open("record.rcd", ios::binary | ios::out | ios_base::app);
+            rec.open(config.record_path, ios::binary | ios::out | ios_base::app);
         }
         else {
-            rec.open("record.rcd", ios::binary | ios::out);
+            rec.open(config.record_path, ios::binary | ios::out);
             rec.write((char*)&config.N, sizeof(config.N));
             rec.write((char*)&config.DeltaT, sizeof(config.DeltaT));
             unsigned int size = sizeof(T) * config.N * 2;
@@ -167,7 +167,7 @@ void Simulation<T>::run() {
         }
     }
     rec.close();
-    ofstream cptr("capture.cptr", ios::binary | ios::out);
+    ofstream cptr(config.capture_path, ios::binary | ios::out);
     cptr.write((char*)points, sizeof(T) * config.N * 2);
     cptr.write((char*)vels, sizeof(T) * config.N * 2);
     cptr.write((char*)masses, sizeof(T) * config.N);

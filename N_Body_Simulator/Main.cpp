@@ -102,7 +102,7 @@ _inline string to_time_str(double time) {
 
 int main() {
     ContextSettings settings;
-    settings.antialiasingLevel = 8;
+    settings.antialiasingLevel = 10;
     RenderWindow window(VideoMode(config.W, config.H), "N-body Simulator", Style::Default, settings);
     //window.setFramerateLimit(60);
 
@@ -134,8 +134,8 @@ int main() {
     sim_info.setPosition(Vector2f(10, 10));
     sim_info.setCharacterSize(15);
     sim_info.setFillColor(Color(255, 255, 255, 255));
-    sim_info.setOutlineColor(Color(0, 0, 0, 155));
-    sim_info.setOutlineThickness(3);
+    sim_info.setOutlineColor(Color(0, 0, 0, 200));
+    sim_info.setOutlineThickness(3.5);
     sim_info.setFont(font);
     Text config_info(sim_info);
 

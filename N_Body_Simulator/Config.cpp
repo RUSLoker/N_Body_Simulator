@@ -59,6 +59,10 @@ void Config::readConfig(char* path) {
 				config_readed[4] = true;
 			}
 		}
+		else if (s == "READ_CAPTURE:") {
+			cfg >> read_capture;
+			config_readed[5] = true;
+		}
 	}
 	cfg.close();
 
@@ -87,6 +91,9 @@ void Config::readConfig(char* path) {
 	}
 	if (!config_readed[4]) {
 		cfg << "MAX_CACHE_ALLOC: " << (double)max_cache / (1 << 20) << " Mb" << endl;
+	}
+	if (!config_readed[5]) {
+		cfg << "READ_CAPTURE: " << read_capture << endl;
 	}
 	cfg.close();
 }
