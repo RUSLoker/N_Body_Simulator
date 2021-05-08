@@ -111,6 +111,7 @@ template <typename T>
 
 void Simulation<T>::run() {
     auto start = std::chrono::system_clock::now();
+    startTime = start;
     work = true;
     alive = true;
     double updates = 0;
@@ -157,12 +158,10 @@ void Simulation<T>::run() {
         auto now = chrono::system_clock::now();
         chrono::duration<double> elapsed_seconds = now - start;
         double elaps = elapsed_seconds.count();
-        if (elaps < 1) {
-            updates++;
-        }
-        else {
-            updates++;
-            ups = updates / elaps;
+        updates++;
+        totalUpdates++;
+        if (elaps >= 1) {
+            UPS = updates / elaps;
             start = now;
             updates = 0;
         }

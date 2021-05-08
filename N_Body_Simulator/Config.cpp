@@ -55,7 +55,7 @@ void Config::readConfig(char* path) {
 					value *= 1024;
 					break;
 				}
-				max_cache = (int)value;
+				max_cache = (unsigned long long)value;
 				config_readed[4] = true;
 			}
 		}

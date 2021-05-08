@@ -2,6 +2,7 @@
 #include <chrono>
 #include <ctime>
 #include <thread>
+#include <iomanip>
 #include <fstream>
 #include "BH_tree.cpp"
 #include "omp.h"
@@ -23,12 +24,12 @@ volatile bool cptr_loaded = false;
 Config config;
 Simulation<CALCULATION_TYPE>* sim;
 
-string to_string_round(CALCULATION_TYPE num) {
+_inline string to_string_round(CALCULATION_TYPE num) {
     string cur = to_string(num);
     return cur.substr(0, cur.size() - 4);
 }
 
-String percent_bar(CALCULATION_TYPE p) {
+_inline String percent_bar(CALCULATION_TYPE p) {
     char16_t bar[] = { '[', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ']' };
     p *= 100;
     int int_p = (int)ceil(p);
@@ -84,10 +85,25 @@ String percent_bar(CALCULATION_TYPE p) {
     return String::fromUtf16<char16_t*>(bar, bar + 12);
 }
 
+_inline string to_time_str(double time) {
+    long long int_p = (long long)time;
+    double mS = time - int_p;
+    long long H = int_p / 3600;
+    int_p %= 3600;
+    long long M = int_p / 60;
+    int_p %= 60;
+    long long S = int_p;
+    stringstream ss;
+    if (H < 10)
+        ss << setw(2) << setfill('0') << right;
+    ss << H << ":" << setw(2) << setfill('0') << right << M << ":" << setw(2) << setfill('0') << right << S << to_string(mS).substr(1, 4);
+    return ss.str();
+}
+
 int main() {
     ContextSettings settings;
     settings.antialiasingLevel = 8;
-    RenderWindow window(VideoMode(config.W, config.H), "N-body Simulation", Style::Default, settings);
+    RenderWindow window(VideoMode(config.W, config.H), "N-body Simulator", Style::Default, settings);
     //window.setFramerateLimit(60);
 
     auto start = std::chrono::system_clock::now();
@@ -271,20 +287,20 @@ int main() {
                 }
             }
         }
-
         if (show_info) {
-            unsigned int usedCache = sim->totalTreeNodes * sizeof(BH_tree<CALCULATION_TYPE>);
-            int assumedCache = config.max_cache;
+            unsigned long long usedCache = sim->totalTreeNodes * sizeof(BH_tree<CALCULATION_TYPE>);
+            unsigned long long assumedCache = config.max_cache;
             String bar = percent_bar((CALCULATION_TYPE)usedCache / assumedCache);
             sim_info.setString(
                 "FPS: " + to_string(fps) + "\n" +
-                "UPS: " + to_string(sim->ups) + "\n" +
-                "sim_time_per_real_second: " + to_string(sim->ups * config.DeltaT) + "\n" +
+                "UPS: " + to_string(sim->UPS) + "(" + to_string(sim->meanUPS()) + ")\n" +
+                "evaluation_time: " + to_time_str(sim->evaluationTime()) + "\n" +
+                "sim_time_per_real_second: " + to_string(sim->UPS * config.DeltaT) + "(" + to_string(sim->meanUPS() * config.DeltaT) + ")" + "\n" +
                 "sim_tree_depth: " + to_string(sim->treeDepth) + "\n" +
                 "total_sim_tree_nodes: " + to_string(sim->totalTreeNodes) + "\n" +
                 "active_sim_tree_nodes: " + to_string(sim->activeTreeNodes) + "\n" +
                 "tree_node_cache: " + to_string_round((CALCULATION_TYPE)usedCache / (1 << 20)) + "(" + to_string_round((CALCULATION_TYPE)assumedCache / (1 << 20)) + ") Mb" + "\n" +
-                "\t\t\t" + to_string_round((CALCULATION_TYPE)usedCache / assumedCache * 100) + "%" + bar
+                "                 " + to_string_round((CALCULATION_TYPE)usedCache / assumedCache * 100) + "%" + bar
             );
             window.draw(sim_info);
         }
@@ -310,7 +326,7 @@ int main() {
         chrono::duration<double> elapsed_seconds = now - start;
         frames++;
         volatile double elaps = elapsed_seconds.count();
-        if (elaps > 1) {
+        if (elaps >= 1) {
             fps = frames / elaps;
             start = now;
             frames = 0;
