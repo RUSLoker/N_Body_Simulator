@@ -11,7 +11,7 @@ template <typename T>
 
 Simulation<T>::Simulation(Config config) {
     this->config = config;
-    T* propsArr = new T[config.N * 5];
+    T* propsArr = (T*)malloc(sizeof(T) * config.N * 5);
     points = propsArr;
     vels = propsArr + config.N * 2;
     masses = propsArr + config.N * 4;
