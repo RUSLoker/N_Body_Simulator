@@ -1,6 +1,6 @@
 #pragma once
 #include "Config.h"
-#include "BH_tree.h"
+#include "BH_tree.cuh"
 #include "constants.h"
 #include <chrono>
 #include <ctime>
@@ -45,7 +45,13 @@ public:
 private:
 
 	Config config;
+	Config* config_d;
 	BH_tree<T>* tree;
+	BH_tree<T>* tree_d;
+	T* points_d;
+	T* vels_d;
+	T* masses_d;
+	bool* skip_d;
 	bool cptr_loaded;
 	volatile bool work = false;
 	chrono::system_clock::time_point startTime;
@@ -53,4 +59,6 @@ private:
 	Simulation() {};
 
 	void calculateForces();
+
+	void makeTree();
 };

@@ -1,5 +1,5 @@
 #include "Config.h"
-#include "BH_tree.h"
+#include "BH_tree.cuh"
 #include <vector>
 #include <fstream>
 #include <string>

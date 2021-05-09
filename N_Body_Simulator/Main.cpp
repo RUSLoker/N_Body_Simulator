@@ -9,6 +9,9 @@
 #include "constants.h"
 #include "Config.h"
 #include "Simulation.cpp"
+#include <cuda.h>
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
 
 
 using namespace sf;
@@ -101,6 +104,7 @@ _inline string to_time_str(double time) {
 }
 
 int main() {
+    cudaSetDevice(0);
     ContextSettings settings;
     settings.antialiasingLevel = 10;
     RenderWindow window(VideoMode(config.W, config.H), "N-body Simulator", Style::Default, settings);
