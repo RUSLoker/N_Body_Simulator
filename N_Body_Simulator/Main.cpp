@@ -107,7 +107,8 @@ _inline string to_time_str(double time) {
 }
 
 _inline void ask_cache_increace() {
-    while (window->isOpen() && !sim->alive)
+    bool made = false;
+    while (window->isOpen() && !made)
     {
         Event event;
         while (window->pollEvent(event))
@@ -118,8 +119,6 @@ _inline void ask_cache_increace() {
                 break;
             case Event::KeyPressed:
                 if (event.key.code == Keyboard::Y) {
-                    delete sim;
-                    vtree->~BH_tree();
                     size_t true_size = config.N * 9 / 2 * sizeof(BH_tree<CALCULATION_TYPE>);
                     if (config.max_cache < true_size) {
                         config.max_cache = true_size;
@@ -127,12 +126,18 @@ _inline void ask_cache_increace() {
                     else {
                         config.max_cache = config.max_cache * 3 / 2;
                     }
-                    config.read_capture = true;
-                    sim = new Simulation<CALCULATION_TYPE>(config);
-                    vtree = BH_tree<CALCULATION_TYPE>::newTree(config);
+                    if (!sim->alive) {
+                        delete sim;
+                        config.read_capture = true;
+                        sim = new Simulation<CALCULATION_TYPE>(config);
 
-                    thread th(&Simulation<CALCULATION_TYPE>::run, sim);
-                    th.detach();
+                        thread th(&Simulation<CALCULATION_TYPE>::run, sim);
+                        th.detach();
+                    }
+
+                    vtree->~BH_tree();
+                    vtree = BH_tree<CALCULATION_TYPE>::newTree(config);
+                    made = true;
                 }
                 break;
             case Event::Resized:
