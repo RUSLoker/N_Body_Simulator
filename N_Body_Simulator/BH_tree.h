@@ -13,6 +13,7 @@ public:
 	T* body_coords;
 	T body_mass = -1;
 	T center[2];
+	T center_of_mass[2];
 	T node_mass;
 	T node_width;
 	BH_tree<T>* children;
@@ -38,11 +39,11 @@ public:
 		return node_depth;
 	}
 
-	SIZE_TYPE totalNodeCount() {
-		return ((SIZE_TYPE)*next_caching - (SIZE_TYPE)node_cache) / (SIZE_TYPE)sizeof(BH_tree<T>);
+	size_t totalNodeCount() {
+		return ((size_t)*next_caching - (size_t)node_cache) / (size_t)sizeof(BH_tree<T>);
 	}
 
-	SIZE_TYPE activeNodeCount() {
+	size_t activeNodeCount() {
 		return *active_node_count;
 	}
 
@@ -50,10 +51,10 @@ private:
 	unsigned int node_depth = 1;
 	BH_tree<T>* node_cache;
 	BH_tree<T>** next_caching;
-	SIZE_TYPE* active_node_count;
+	size_t* active_node_count;
 	Config* tree_config;
 
 	BH_tree() {};
 
-	void newNode(BH_tree<T>* cache, BH_tree<T>** next, SIZE_TYPE* node_counter, Config* config);
+	void newNode(BH_tree<T>* cache, BH_tree<T>** next, size_t* node_counter, Config* config);
 };

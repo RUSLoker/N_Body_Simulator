@@ -23,6 +23,12 @@ bool show_config_info = false;
 volatile bool cptr_loaded = false;
 Config config;
 Simulation<CALCULATION_TYPE>* sim;
+RenderWindow* window; 
+BH_tree<CALCULATION_TYPE>* vtree; 
+Font font;
+Text sim_info;
+Text config_info;
+Text warning;
 
 _inline string to_string_round(CALCULATION_TYPE num) {
     string cur = to_string(num);
@@ -100,11 +106,58 @@ _inline string to_time_str(double time) {
     return ss.str();
 }
 
+_inline void ask_cache_increace() {
+    while (window->isOpen() && !sim->alive)
+    {
+        Event event;
+        while (window->pollEvent(event))
+        {
+            switch (event.type) {
+            case Event::Closed:
+                window->close();
+                break;
+            case Event::KeyPressed:
+                if (event.key.code == Keyboard::Y) {
+                    delete sim;
+                    vtree->~BH_tree();
+                    size_t true_size = config.N * 9 / 2 * sizeof(BH_tree<CALCULATION_TYPE>);
+                    if (config.max_cache < true_size) {
+                        config.max_cache = true_size;
+                    }
+                    else {
+                        config.max_cache = config.max_cache * 3 / 2;
+                    }
+                    config.read_capture = true;
+                    sim = new Simulation<CALCULATION_TYPE>(config);
+                    vtree = BH_tree<CALCULATION_TYPE>::newTree(config);
+
+                    thread th(&Simulation<CALCULATION_TYPE>::run, sim);
+                    th.detach();
+                }
+                break;
+            case Event::Resized:
+                Vector2u dims = window->getSize();
+                config.W = dims.x;
+                config.H = dims.y;
+                View newView(Vector2f(config.W / 2, config.H / 2), Vector2f(config.W, config.H));
+                window->setView(newView);
+                sim_info.setPosition(Vector2f(10 + config.W % 2 * 0.5, 10 + config.H % 2 * 0.5));
+                FloatRect warn_bounds = warning.getLocalBounds();
+                warning.setPosition(Vector2f(config.W * 0.5 + config.W % 2 * 0.5 - warn_bounds.width * 0.5, config.H * 0.5 + config.H % 2 * 0.5 - warn_bounds.height * 0.5));
+                break;
+            }
+        }
+        window->clear(Color(165, 0, 0, 255));
+        window->draw(warning);
+        window->display();
+    }
+}
+
 int main() {
     ContextSettings settings;
     settings.antialiasingLevel = 10;
-    RenderWindow window(VideoMode(config.W, config.H), "N-body Simulator", Style::Default, settings);
-    //window.setFramerateLimit(60);
+    window = new RenderWindow(VideoMode(config.W, config.H), "N-body Simulator", Style::Default, settings);
+    //window->setFramerateLimit(60);
 
     auto start = std::chrono::system_clock::now();
     auto now = chrono::system_clock::now();
@@ -113,12 +166,9 @@ int main() {
 
     config.readConfig("config.cfg");
 
-    BH_tree<CALCULATION_TYPE>* vtree = BH_tree<CALCULATION_TYPE>::newTree(config);
+    vtree = BH_tree<CALCULATION_TYPE>::newTree(config);
 
     sim = new Simulation<CALCULATION_TYPE>(config);
-
-    thread th(&Simulation<CALCULATION_TYPE>::run, sim);
-    th.detach();
 
     double frames = 0;
 
@@ -128,30 +178,35 @@ int main() {
 
     CALCULATION_TYPE* point_b = new CALCULATION_TYPE[config.N * 2];
 
-    Font font;
     font.loadFromFile("fonts/JetBrainsMono-Regular.ttf");
-    Text sim_info;
     sim_info.setPosition(Vector2f(10, 10));
     sim_info.setCharacterSize(15);
     sim_info.setFillColor(Color(255, 255, 255, 255));
     sim_info.setOutlineColor(Color(0, 0, 0, 200));
     sim_info.setOutlineThickness(3.5);
     sim_info.setFont(font);
-    Text config_info(sim_info);
+    config_info = Text(sim_info);
+    warning = Text(sim_info);
+    warning.setString("Cache overflowed! \nPress Y to increase it's size.");
+    FloatRect warn_bounds = warning.getLocalBounds();
+    warning.setPosition(Vector2f(config.W * 0.5 + config.W % 2 * 0.5 - warn_bounds.width * 0.5, config.H * 0.5 + config.H % 2 * 0.5 - warn_bounds.height * 0.5));
+
+    thread th(&Simulation<CALCULATION_TYPE>::run, sim);
+    th.detach();
 
 #define point_b(i, j) point_b[i*2 + j]
 
-    while (window.isOpen())
+    while (window->isOpen())
     {
         Event event;
-        while (window.pollEvent(event))
+        while (window->pollEvent(event))
         {
             int tics;
             switch (event.type) {
             case Event::Closed:
                 sim->stop();
                 while (sim->alive);
-                window.close();
+                window->close();
                 break;
             case Event::MouseWheelMoved:
                 tics = event.mouseWheel.delta;
@@ -185,46 +240,51 @@ int main() {
                 }
                 break;
             case Event::Resized:
-                Vector2u dims = window.getSize();
+                Vector2u dims = window->getSize();
                 config.W = dims.x;
                 config.H = dims.y;
                 View newView(Vector2f(config.W/2, config.H/2), Vector2f(config.W, config.H));
-                window.setView(newView);
+                window->setView(newView);
                 sim_info.setPosition(Vector2f(10 + config.W % 2 * 0.5, 10 + config.H % 2 * 0.5));
+                FloatRect warn_bounds = warning.getLocalBounds();
+                warning.setPosition(Vector2f(config.W * 0.5 + config.W % 2 * 0.5 - warn_bounds.width * 0.5, config.H * 0.5 + config.H % 2 * 0.5 - warn_bounds.height * 0.5));
                 break;
+            }
+        }
+
+        if (!sim->alive) {
+            if (string(sim->except.what()) == string(CACHE_OVERFLOW_EXCEPT.what())) {
+                ask_cache_increace();
             }
         }
 
         memcpy(point_b, sim->points, sizeof(CALCULATION_TYPE) * config.N * 2);
 
-        if (drawBH || centrilize) {
-            CALCULATION_TYPE maxD = 0;
-            for (int i = 0; i < config.N; i++) {
-                if (sim->skip[i]) continue;
-                maxD = abs(point_b(i, 0)) > maxD ? abs(point_b(i, 0)) : maxD;
-                maxD = abs(point_b(i, 1)) > maxD ? abs(point_b(i, 1)) : maxD;
-            }
-            maxD *= 2;
-            maxD += 100;
+        try {
+            if (drawBH || centrilize) {
+                CALCULATION_TYPE maxD = 0;
+                for (int i = 0; i < config.N; i++) {
+                    if (sim->skip[i]) continue;
+                    maxD = abs(point_b(i, 0)) > maxD ? abs(point_b(i, 0)) : maxD;
+                    maxD = abs(point_b(i, 1)) > maxD ? abs(point_b(i, 1)) : maxD;
+                }
+                maxD *= 2;
+                maxD += 100;
 
-            vtree->clear();
-            vtree->setNew(0, 0, maxD);
-            for (int i = 0; i < config.N; i++) {
-                if (sim->skip[i]) continue;
-                vtree->add(point_b + i * 2, sim->masses[i]);
+                vtree->clear();
+                vtree->setNew(0, 0, maxD);
+                for (int i = 0; i < config.N; i++) {
+                    if (sim->skip[i]) continue;
+                    vtree->add(point_b + i * 2, sim->masses[i]);
+                }
             }
+        }
+        catch (exception e) {
+            ask_cache_increace();
         }
 
         if (centrilize) {
             CALCULATION_TYPE center[2]{ 0, 0 };
-
-            //for (int i = 0; i < N; i++) {
-            //    center[0] += point_b[i][0];
-            //    center[1] += point_b[i][1];
-            //}
-            //center[0] /= N;
-            //center[1] /= N;
-
             BH_tree<CALCULATION_TYPE>* maxMtree = vtree;
             int maxdpt = vtree->depth();
             for (int i = 0; i < maxdpt; i++) {
@@ -255,8 +315,8 @@ int main() {
             pixels[i].color = Color(255, 255, 255, 255);
         }
 
-        window.clear();
-        window.draw(pixels);
+        window->clear();
+        window->draw(pixels);
 
 
         if (drawBH) {
@@ -283,7 +343,7 @@ int main() {
                     if (i->body_mass > 0) {
                         rect.setFillColor(Color(0, 0, 255, 40));
                     }
-                    window.draw(rect);
+                    window->draw(rect);
                 }
             }
         }
@@ -302,7 +362,7 @@ int main() {
                 "tree_node_cache: " + to_string_round((CALCULATION_TYPE)usedCache / (1 << 20)) + "(" + to_string_round((CALCULATION_TYPE)assumedCache / (1 << 20)) + ") Mb" + "\n" +
                 "                 " + to_string_round((CALCULATION_TYPE)usedCache / assumedCache * 100) + "%" + bar
             );
-            window.draw(sim_info);
+            window->draw(sim_info);
         }
 
         if (show_config_info) {
@@ -313,14 +373,14 @@ int main() {
                 "time_step: " + to_string(config.DeltaT) + "\n" +
                 "record: " + (config.record ? "true" : "false") + "\n" +
                 "max_cache: " + to_string_round((CALCULATION_TYPE)config.max_cache / (1 << 20)) + " Mb\n" +
-                "caching_nodes_num: " + to_string(config.caching_nodes_num) + "\n"
+                "caching_nodes_num: " + to_string(config.max_cache / sizeof(BH_tree<CALCULATION_TYPE>)) + "\n"
             );
             FloatRect bounds = config_info.getLocalBounds();
             config_info.setPosition(Vector2f(config.W - 10 + config.W % 2 * 0.5 - bounds.width, 10 + config.H % 2 * 0.5));
-            window.draw(config_info);
+            window->draw(config_info);
         }
 
-        window.display();
+        window->display();
 
         now = chrono::system_clock::now();
         chrono::duration<double> elapsed_seconds = now - start;
