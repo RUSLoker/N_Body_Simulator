@@ -3,6 +3,7 @@
 #include <chrono>
 #include <ctime>
 #include "omp.h"
+#include "cudaFunctions.cuh"
 #include <fstream>
 
 using namespace std;
@@ -56,6 +57,18 @@ Simulation<T>::Simulation(Config config) {
         skip[i] = false;
     }
 
+    if (config.useCUDA) {
+        cudaMalloc(&config_d, sizeof(Config));
+        cudaMemcpy(config_d, &config, sizeof(Config), cudaMemcpyHostToDevice);
+        T* propsArr_d;
+        cudaMalloc(&propsArr_d, sizeof(T) * config.N * 7);
+        pointsTMP_d = propsArr_d;
+        points_d = propsArr_d + config.N * 2;
+        vels_d = propsArr_d + config.N * 4;
+        masses_d = propsArr_d + config.N * 6;
+        cudaMemcpy(points_d, propsArr, sizeof(T) * config.N * 5, cudaMemcpyHostToDevice);
+    }
+
 #undef points
 #undef vels
 }
@@ -66,7 +79,13 @@ Simulation<T>::Simulation(Config config) {
 template <typename T>
 
 void Simulation<T>::calculateForces() {
-    if (!config.useBH) {
+    if (config.useCUDA) {
+        calculateForcesCUDA(points_d, pointsTMP_d, vels_d, masses_d, config_d, config.N);
+        T* tmp = pointsTMP_d;
+        pointsTMP_d = points_d;
+        points_d = tmp;
+    }
+    else if (!config.useBH) {
 #pragma omp parallel for
         for (int i = 0; i < config.N; i++) {
             T ca[] = { 0, 0 };
@@ -154,9 +173,14 @@ void Simulation<T>::run() {
             activeTreeNodes = tree->activeNodeCount();
         }
         calculateForces();
-        for (int i = 0; i < config.N; i++) {
-            points(i, 0) += vels(i, 0) * config.DeltaT;
-            points(i, 1) += vels(i, 1) * config.DeltaT;
+        if (!config.useCUDA)  {
+            for (int i = 0; i < config.N; i++) {
+                points(i, 0) += vels(i, 0) * config.DeltaT;
+                points(i, 1) += vels(i, 1) * config.DeltaT;
+            }
+        }
+        if (config.useCUDA) {
+            cudaMemcpy(points, points_d, sizeof(T) * config.N * 2, cudaMemcpyDeviceToHost);
         }
         if (config.record) {
             rec.write((char*)points, sizeof(T) * config.N * 2);
@@ -180,6 +204,12 @@ void Simulation<T>::run() {
     cptr.write((char*)masses, sizeof(T) * config.N);
     cptr.close();
     alive = false;
+}
+
+template <typename T>
+
+void Simulation<T>::getPoints(T* dst) {
+    memcpy(dst, points, sizeof(T) * config.N * 2);
 }
 
 #undef points

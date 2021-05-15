@@ -41,5 +41,13 @@
     <ClInclude Include="Simulation.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="CUDAFunctions.cuh">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="CUDAFunctions.cu">
+      <Filter>Исходные файлы</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

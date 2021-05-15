@@ -155,7 +155,11 @@
     <ClInclude Include="BH_tree.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="constants.h" />
+    <ClInclude Include="CUDAFunctions.cuh" />
     <ClInclude Include="Simulation.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="CUDAFunctions.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

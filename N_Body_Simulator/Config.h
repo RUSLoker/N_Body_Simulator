@@ -20,7 +20,7 @@ public:
 	CALCULATION_TYPE min_accel = 0.05;
 	CALCULATION_TYPE max_accel = 1000000000;
 	CALCULATION_TYPE max_dist = 40000. * 40000.;
-	bool useBH = true;
+	bool useBH = false;
 	bool record = false;
 	size_t max_cache = 1073741824;
 	string capture_dir = "captures";
@@ -28,6 +28,7 @@ public:
 	string capture_path = capture_dir + "\\capture.cptr";
 	string record_path = record_dir + "\\record.rcd";
 	bool read_capture = true;
+	bool useCUDA = true;
 
 	static const int configN = 6;
 

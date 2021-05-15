@@ -14,7 +14,7 @@
 
 #define MAX_CACHING_NODES_NUM 100000
 
-#define CALCULATION_TYPE long double
+#define CALCULATION_TYPE float
 
 #define CACHE_OVERFLOW_EXCEPT exception("Cache overflowed. Try to increase its size.")
 

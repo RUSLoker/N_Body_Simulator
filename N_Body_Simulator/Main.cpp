@@ -162,7 +162,7 @@ int main() {
     ContextSettings settings;
     settings.antialiasingLevel = 10;
     window = new RenderWindow(VideoMode(config.W, config.H), "N-body Simulator", Style::Default, settings);
-    //window->setFramerateLimit(60);
+    window->setVerticalSyncEnabled(true);
 
     auto start = std::chrono::system_clock::now();
     auto now = chrono::system_clock::now();
@@ -195,6 +195,15 @@ int main() {
     warning.setString("Cache overflowed! \nPress Y to increase it's size.");
     FloatRect warn_bounds = warning.getLocalBounds();
     warning.setPosition(Vector2f(config.W * 0.5 + config.W % 2 * 0.5 - warn_bounds.width * 0.5, config.H * 0.5 + config.H % 2 * 0.5 - warn_bounds.height * 0.5));
+
+    cudaDeviceProp props;
+    cudaGetDeviceProperties(&props, 0);
+
+    string cudaInfo = "CUDA device properties\nname: " + string(props.name) + "\n" +
+        "API_major: " + to_string(props.major) + "\n" +
+        "API_minor: " + to_string(props.minor) + "\n" +
+        "clockRate: " + to_string_round(props.clockRate / 1000.) + " MHz\n" +
+        "multiProcessorCount: " + to_string(props.multiProcessorCount) + "\n";
 
     thread th(&Simulation<CALCULATION_TYPE>::run, sim);
     th.detach();
@@ -263,7 +272,7 @@ int main() {
             }
         }
 
-        memcpy(point_b, sim->points, sizeof(CALCULATION_TYPE) * config.N * 2);
+        sim->getPoints(point_b);
 
         try {
             if (drawBH || centrilize) {
@@ -378,7 +387,8 @@ int main() {
                 "time_step: " + to_string(config.DeltaT) + "\n" +
                 "record: " + (config.record ? "true" : "false") + "\n" +
                 "max_cache: " + to_string_round((CALCULATION_TYPE)config.max_cache / (1 << 20)) + " Mb\n" +
-                "caching_nodes_num: " + to_string(config.max_cache / sizeof(BH_tree<CALCULATION_TYPE>)) + "\n"
+                "caching_nodes_num: " + to_string(config.max_cache / sizeof(BH_tree<CALCULATION_TYPE>)) + "\n" +
+                (config.useCUDA ? cudaInfo : "")
             );
             FloatRect bounds = config_info.getLocalBounds();
             config_info.setPosition(Vector2f(config.W - 10 + config.W % 2 * 0.5 - bounds.width, 10 + config.H % 2 * 0.5));

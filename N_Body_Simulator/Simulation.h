@@ -43,6 +43,8 @@ public:
 		return totalUpdates / evaluationTime();
 	}
 
+	void getPoints(T* dst);
+
 	~Simulation() {
 		free(points);
 		delete[] skip;
@@ -51,7 +53,12 @@ public:
 
 private:
 	Config config;
+	Config* config_d;
 	BH_tree<T>* tree;
+	T* points_d;
+	T* pointsTMP_d;
+	T* vels_d;
+	T* masses_d;
 	bool cptr_loaded;
 	volatile bool work = false;
 	chrono::system_clock::time_point startTime;
