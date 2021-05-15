@@ -41,7 +41,7 @@ void Config::readConfig(char* path) {
 			cfg >> value >> type;
 			transform(type.begin(), type.end(), type.begin(), ::toupper);
 			char prep = type[0];
-			if (type[1] == 'B') {
+			if (type[1] == 'B' || type[0] == 'B') {
 				switch (prep) {
 				case 'P':
 					value *= 1024;
@@ -55,7 +55,10 @@ void Config::readConfig(char* path) {
 					value *= 1024;
 					break;
 				}
-				max_cache = (unsigned long long)value;
+				max_cache = (size_t)value;
+				if (max_cache < sizeof(BH_tree<CALCULATION_TYPE>)) {
+					max_cache = sizeof(BH_tree<CALCULATION_TYPE>);
+				}
 				config_readed[4] = true;
 			}
 		}
@@ -65,8 +68,6 @@ void Config::readConfig(char* path) {
 		}
 	}
 	cfg.close();
-
-	caching_nodes_num = max_cache / sizeof(BH_tree<CALCULATION_TYPE>);
 
 	cfg.open("config.cfg", ios::in);
 	cfg.seekg(-1, cfg._Seekend);

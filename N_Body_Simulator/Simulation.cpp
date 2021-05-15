@@ -3,7 +3,6 @@
 #include <chrono>
 #include <ctime>
 #include "omp.h"
-#include "cudaFunctions.cuh"
 #include <fstream>
 
 using namespace std;
@@ -12,13 +11,12 @@ template <typename T>
 
 Simulation<T>::Simulation(Config config) {
     this->config = config;
-    T* propsArr = (T*)malloc(sizeof(T) * config.N * 5);
+    T* propsArr = (T*)malloc(config.N * (size_t)5 * sizeof(T));
     points = propsArr;
     vels = propsArr + config.N * 2;
     masses = propsArr + config.N * 4;
     skip = new bool[config.N];
     tree = BH_tree<T>::newTree(config);
-
 
 #define points(i, j) points[i*2 + j]
 #define vels(i, j) vels[i*2 + j]
@@ -58,20 +56,6 @@ Simulation<T>::Simulation(Config config) {
         skip[i] = false;
     }
 
-    if (config.useCUDA) {
-        cudaMalloc(&config_d, sizeof(Config));
-        cudaMemcpy(config_d, &config, sizeof(Config), cudaMemcpyHostToDevice);
-        T* propsArr_d;
-        cudaMalloc(&propsArr_d, sizeof(T) * config.N * 5);
-        points_d = propsArr_d;
-        vels_d = propsArr_d + config.N * 2;
-        masses_d = propsArr_d + config.N * 4;
-        cudaMalloc(&skip_d, sizeof(bool) * config.N);
-        tree_d = BH_tree<T>::newTreeCUDA(config);
-        cudaMemcpy(propsArr_d, propsArr, sizeof(T) * config.N * 5, cudaMemcpyHostToDevice);
-        cudaMemcpy(skip_d, skip, sizeof(bool) * config.N, cudaMemcpyHostToDevice);
-    }
-
 #undef points
 #undef vels
 }
@@ -82,10 +66,7 @@ Simulation<T>::Simulation(Config config) {
 template <typename T>
 
 void Simulation<T>::calculateForces() {
-    if (config.useCUDA) {
-        calculateForcesCUDA(points_d, vels_d, masses_d, skip_d, tree_d, config_d, config.N);
-    }
-    else if (!config.useBH) {
+    if (!config.useBH) {
 #pragma omp parallel for
         for (int i = 0; i < config.N; i++) {
             T ca[] = { 0, 0 };
@@ -135,7 +116,7 @@ void Simulation<T>::run() {
     alive = true;
     double updates = 0;
     ofstream rec;
-    if (config.record) {
+    if (config.record)
         if (cptr_loaded) {
             rec.open(config.record_path, ios::binary | ios::out | ios_base::app);
         }
@@ -146,21 +127,36 @@ void Simulation<T>::run() {
             unsigned int size = sizeof(T) * config.N * 2;
             rec.write((char*)&size, sizeof(size));
         }
-        rec.write((char*)points, sizeof(T) * config.N * 2);
-    }
     while (work) {
         if (config.useBH) {
-            makeTree();
+            T maxD = 0;
+            for (int i = 0; i < config.N; i++) {
+                if (skip[i]) continue;
+                maxD = abs(points(i, 0)) > maxD ? abs(points(i, 0)) : maxD;
+                maxD = abs(points(i, 1)) > maxD ? abs(points(i, 1)) : maxD;
+            }
+            maxD *= 2;
+            maxD += 100;
+            tree->clear();
+            tree->setNew(0, 0, maxD);
+            for (int i = 0; i < config.N; i++) {
+                if (skip[i]) continue;
+                try {
+                    tree->add(points + i * 2, masses[i]);
+                }
+                catch (exception e) {
+                    except = e;
+                    goto END_RUN;
+                }
+            }
+            treeDepth = tree->depth();
+            totalTreeNodes = tree->totalNodeCount();
+            activeTreeNodes = tree->activeNodeCount();
         }
         calculateForces();
-        if (!config.useBH) {
-            for (int i = 0; i < config.N; i++) {
-                points(i, 0) += vels(i, 0) * config.DeltaT;
-                points(i, 1) += vels(i, 1) * config.DeltaT;
-            }
-        }
-        if (config.useCUDA) {
-            cudaMemcpy(points, points_d, sizeof(T) * config.N * 2, cudaMemcpyDeviceToHost);
+        for (int i = 0; i < config.N; i++) {
+            points(i, 0) += vels(i, 0) * config.DeltaT;
+            points(i, 1) += vels(i, 1) * config.DeltaT;
         }
         if (config.record) {
             rec.write((char*)points, sizeof(T) * config.N * 2);
@@ -176,6 +172,7 @@ void Simulation<T>::run() {
             updates = 0;
         }
     }
+    END_RUN:
     rec.close();
     ofstream cptr(config.capture_path, ios::binary | ios::out);
     cptr.write((char*)points, sizeof(T) * config.N * 2);
@@ -183,38 +180,6 @@ void Simulation<T>::run() {
     cptr.write((char*)masses, sizeof(T) * config.N);
     cptr.close();
     alive = false;
-}
-
-template <typename T>
-
-void Simulation<T>::makeTree() {
-    if (config.useCUDA) {
-        makeTreeCUDA(points_d, vels_d, masses_d, skip_d, tree_d, config_d);
-        BH_tree<T>* dt = (BH_tree<T>*)malloc(sizeof(BH_tree<T>));
-        cudaMemcpy(dt, tree_d, sizeof(BH_tree<T>), cudaMemcpyDeviceToHost);
-        bool hn = dt->hasNodes;
-    }
-    else {
-        T maxD = 0;
-        for (int i = 0; i < config.N; i++) {
-            points(i, 0) += vels(i, 0) * config.DeltaT;
-            points(i, 1) += vels(i, 1) * config.DeltaT;
-            if (skip[i]) continue;
-            maxD = abs(points(i, 0)) > maxD ? abs(points(i, 0)) : maxD;
-            maxD = abs(points(i, 1)) > maxD ? abs(points(i, 1)) : maxD;
-        }
-        maxD *= 2;
-        maxD += 100;
-        tree->clear();
-        tree->setNew(0, 0, maxD);
-        for (int i = 0; i < config.N; i++) {
-            if (skip[i]) continue;
-            tree->add(points + i * 2, masses[i]);
-        }
-        treeDepth = tree->depth();
-        totalTreeNodes = tree->totalNodeCount();
-        activeTreeNodes = tree->activeNodeCount();
-    } 
 }
 
 #undef points

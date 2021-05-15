@@ -20,9 +20,10 @@ public:
 	double UPS = 0;
 	double totalUpdates = 0;
 	volatile bool alive = false;
-	SIZE_TYPE totalTreeNodes = 0;
-	SIZE_TYPE activeTreeNodes = 0;
+	size_t totalTreeNodes = 0;
+	size_t activeTreeNodes = 0;
 	int treeDepth = 0;
+	exception except;
 
 	Simulation(Config config);
 
@@ -42,8 +43,13 @@ public:
 		return totalUpdates / evaluationTime();
 	}
 
-private:
+	~Simulation() {
+		free(points);
+		delete[] skip;
+		tree->~BH_tree();
+	}
 
+private:
 	Config config;
 	Config* config_d;
 	BH_tree<T>* tree;
