@@ -26,6 +26,7 @@ mono_crash.*
 !**/[Rr]elease/sfml-network-2.dll
 !**/[Rr]elease/sfml-system-2.dll
 !**/[Rr]elease/sfml-window-2.dll
+!**/[Rr]elease/cudart64_110.dll
 [Rr]eleases/
 [Ww][Ii][Nn]32/
 [Aa][Rr][Mm]/
