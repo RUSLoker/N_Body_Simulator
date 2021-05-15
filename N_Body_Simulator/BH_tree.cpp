@@ -7,12 +7,12 @@ using namespace std;
 template <typename T>
 
 BH_tree<T>* BH_tree<T>::newTree(Config config) {
-	BH_tree<T>* cache = new BH_tree<T>[config.caching_nodes_num];
+	BH_tree<T>* cache = (BH_tree<T>*)malloc(config.max_cache);
 	BH_tree<T>** next = new BH_tree<T> * ();
 	*next = cache;
-	SIZE_TYPE* counter = new SIZE_TYPE(0);
-	cache[0].tree_config = new Config();
-	*cache[0].tree_config = config;
+	size_t* counter = new size_t(0);
+	cache[0].tree_config = (Config*)malloc(sizeof(Config));
+	memcpy(cache[0].tree_config, &config, sizeof(Config));
 	cache[0].newNode(cache, next, counter, cache[0].tree_config);
 	cache[0].setNew(0, 0, 100000);
 	return cache;
@@ -20,7 +20,7 @@ BH_tree<T>* BH_tree<T>::newTree(Config config) {
 
 template <typename T>
 
-void BH_tree<T>::newNode(BH_tree<T>* cache, BH_tree<T>** next, SIZE_TYPE* node_counter, Config* config) {
+void BH_tree<T>::newNode(BH_tree<T>* cache, BH_tree<T>** next, size_t* node_counter, Config* config) {
 	hasNodes = false;
 	body_mass = -1;
 	node_mass = 0;
@@ -37,9 +37,14 @@ template <typename T>
 
 void BH_tree<T>::add(T* coords, T mass) {
 	unsigned int curd = 0;
+	center_of_mass[0] = (center_of_mass[0] * node_mass + coords[0] * mass) / (node_mass + mass);
+	center_of_mass[1] = (center_of_mass[1] * node_mass + coords[1] * mass) / (node_mass + mass);
 	node_mass += mass;
 	if (body_mass > 0 && !hasNodes) {
 		if (children == 0) {
+			if ((char*)(*next_caching + 5) > (char*)node_cache + tree_config->max_cache) {
+				throw CACHE_OVERFLOW_EXCEPT;
+			}
 			children = *next_caching;
 
 			for (BH_tree<T>* i = children; i < children + 4; i++) {
@@ -115,7 +120,8 @@ template <typename T>
 BH_tree<T>::~BH_tree() {
 	if (this == node_cache) {
 		delete next_caching;
-		delete[] node_cache;
+		delete active_node_count;
+		free(node_cache);
 	}
 }
 
@@ -124,6 +130,9 @@ template <typename T>
 void BH_tree<T>::setNew(T x, T y, T width) {
 	center[0] = x;
 	center[1] = y;
+	center_of_mass[0] = 0;
+	center_of_mass[1] = 0;
+	node_mass = 0;
 	node_width = width;
 	(*active_node_count)++;
 }
@@ -152,7 +161,7 @@ template <typename T>
 
 void BH_tree<T>::calcAccel(T* coords, T* holder) {
 	if (node_mass <= 0) return;
-	T cr[] = { center[0] - coords[0], center[1] - coords[1] };
+	T cr[] = { center_of_mass[0] - coords[0], center_of_mass[1] - coords[1] };
 	T cdist = sqrt(cr[0] * cr[0] + cr[1] * cr[1]);
 	if (cdist < 0.000001) cdist = 0.000001;
 	if (body_mass < 0. && node_width / cdist <= tree_config->theta) {

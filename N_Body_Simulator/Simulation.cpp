@@ -11,7 +11,7 @@ template <typename T>
 
 Simulation<T>::Simulation(Config config) {
     this->config = config;
-    T* propsArr = (T*)malloc(sizeof(T) * config.N * 5);
+    T* propsArr = (T*)malloc(config.N * (size_t)5 * sizeof(T));
     points = propsArr;
     vels = propsArr + config.N * 2;
     masses = propsArr + config.N * 4;
@@ -141,7 +141,13 @@ void Simulation<T>::run() {
             tree->setNew(0, 0, maxD);
             for (int i = 0; i < config.N; i++) {
                 if (skip[i]) continue;
-                tree->add(points + i * 2, masses[i]);
+                try {
+                    tree->add(points + i * 2, masses[i]);
+                }
+                catch (exception e) {
+                    except = e;
+                    goto END_RUN;
+                }
             }
             treeDepth = tree->depth();
             totalTreeNodes = tree->totalNodeCount();
@@ -166,6 +172,7 @@ void Simulation<T>::run() {
             updates = 0;
         }
     }
+    END_RUN:
     rec.close();
     ofstream cptr(config.capture_path, ios::binary | ios::out);
     cptr.write((char*)points, sizeof(T) * config.N * 2);

@@ -22,8 +22,7 @@ public:
 	CALCULATION_TYPE max_dist = 40000. * 40000.;
 	bool useBH = true;
 	bool record = false;
-	unsigned long long max_cache = 1073741824;
-	unsigned long long caching_nodes_num = MAX_CACHING_NODES_NUM;
+	size_t max_cache = 1073741824;
 	string capture_dir = "captures";
 	string record_dir = "records";
 	string capture_path = capture_dir + "\\capture.cptr";
