@@ -18,5 +18,7 @@
 
 #define CACHE_OVERFLOW_EXCEPT exception("Cache overflowed. Try to increase its size.")
 
+# define PI 3.1415926535897932384626433
+
 #undef x64
 #undef x86

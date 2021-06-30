@@ -58,6 +58,7 @@ private:
 	T* points_d;
 	T* pointsTMP_d;
 	T* vels_d;
+	T* velsTMP_d;
 	T* masses_d;
 	bool cptr_loaded;
 	volatile bool work = false;

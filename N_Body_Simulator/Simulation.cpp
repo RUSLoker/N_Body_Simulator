@@ -39,16 +39,20 @@ Simulation<T>::Simulation(Config config) {
     }
     if(!cptr_loaded) {
         for (int i = 0; i < config.N; i++) {
-            points(i, 0) = ((T)rand() / RAND_MAX) * config.W - 0.5 * config.W;
-            points(i, 1) = ((T)rand() / RAND_MAX) * config.H - 0.5 * config.H;
-            //vels[i][0] = ((double)rand() / RAND_MAX) * 2 * MAX_START_SPEED - MAX_START_SPEED;
-            //vels[i][1] = ((double)rand() / RAND_MAX) * 2 * MAX_START_SPEED - MAX_START_SPEED;
-            // 
-            //vels[i][0] = points[i][1] * MAX_START_SPEED / sqrt(pow(points[i][1], 2) + pow(points[i][0], 2));
-            //vels[i][1] = -points[i][0] * MAX_START_SPEED / sqrt(pow(points[i][1], 2) + pow(points[i][0], 2));
+            T dst = pow(((T)rand() / RAND_MAX), 10) * config.W * 0.5;
+            T angl = ((T)rand() / RAND_MAX) * 2 * PI;
+            points(i, 0) = dst * cos(angl);
+            points(i, 1) = dst * sin(angl);
 
-            vels(i, 0) = points(i, 1) * config.MAX_START_SPEED;
-            vels(i, 1) = -points(i, 0) * config.MAX_START_SPEED;
+            int sgn;
+            if (rand() > RAND_MAX * 0.) {
+                sgn = 1;
+            }
+            else {
+                sgn = -1;
+            }
+            vels(i, 0) = sgn * (points(i, 1) * config.MAX_START_SPEED - points(i, 0));
+            vels(i, 1) = sgn * (-points(i, 0) * config.MAX_START_SPEED - points(i, 1));
             masses[i] = 100;
             skip[i] = false;
         }
@@ -61,12 +65,15 @@ Simulation<T>::Simulation(Config config) {
         cudaMalloc(&config_d, sizeof(Config));
         cudaMemcpy(config_d, &config, sizeof(Config), cudaMemcpyHostToDevice);
         T* propsArr_d;
-        cudaMalloc(&propsArr_d, sizeof(T) * config.N * 7);
+        cudaMalloc(&propsArr_d, sizeof(T) * config.N * 9);
         pointsTMP_d = propsArr_d;
         points_d = propsArr_d + config.N * 2;
         vels_d = propsArr_d + config.N * 4;
-        masses_d = propsArr_d + config.N * 6;
-        cudaMemcpy(points_d, propsArr, sizeof(T) * config.N * 5, cudaMemcpyHostToDevice);
+        velsTMP_d = propsArr_d + config.N * 6;
+        masses_d = propsArr_d + config.N * 8;
+        cudaMemcpy(points_d, points, sizeof(T) * config.N * 2, cudaMemcpyHostToDevice);
+        cudaMemcpy(vels_d, vels, sizeof(T) * config.N * 2, cudaMemcpyHostToDevice);
+        cudaMemcpy(masses_d, masses, sizeof(T) * config.N, cudaMemcpyHostToDevice);
     }
 
 #undef points
@@ -80,10 +87,13 @@ template <typename T>
 
 void Simulation<T>::calculateForces() {
     if (config.useCUDA) {
-        calculateForcesCUDA(points_d, pointsTMP_d, vels_d, masses_d, config_d, config.N);
+        calculateForcesCUDA(points_d, pointsTMP_d, vels_d, velsTMP_d, masses_d, config_d, config.N);
         T* tmp = pointsTMP_d;
         pointsTMP_d = points_d;
-        points_d = tmp;
+        points_d = tmp; 
+        tmp = velsTMP_d;
+        velsTMP_d = vels_d;
+        vels_d = tmp;
     }
     else if (!config.useBH) {
 #pragma omp parallel for
@@ -93,15 +103,9 @@ void Simulation<T>::calculateForces() {
                 if (i == j) continue;
                 T r[] = { points(j, 0) - points(i, 0), points(j, 1) - points(i, 1) };
                 T mr = sqrt(r[0] * r[0] + r[1] * r[1]);
-                if (mr < 0.000001) mr = 0.000001;
-                T t1 = masses[j] / pow(mr, 3) * config.G;
-                T t2 = masses[j] / pow(mr + 0.6, 14) * config.K;
-                if (abs(t1 - t2) < config.max_accel) {
-                    ca[0] += t1 * r[0];
-                    ca[1] += t1 * r[1];
-                    ca[0] -= t2 * r[0];
-                    ca[1] -= t2 * r[1];
-                }
+                T t1 = masses[j] / pow(mr + 1.0f, 3) * config.G;
+                ca[0] += t1 * r[0];
+                ca[1] += t1 * r[1];
             }
             vels(i, 0) += ca[0] * config.DeltaT;
             vels(i, 1) += ca[1] * config.DeltaT;
@@ -135,6 +139,8 @@ void Simulation<T>::run() {
     alive = true;
     double updates = 0;
     ofstream rec;
+    cudaStream_t memReading; //Stream for reading device memory when CUDA is used
+    cudaStreamCreate(&memReading);
     if (config.record)
         if (cptr_loaded) {
             rec.open(config.record_path, ios::binary | ios::out | ios_base::app);
@@ -147,7 +153,11 @@ void Simulation<T>::run() {
             rec.write((char*)&size, sizeof(size));
         }
     while (work) {
-        if (config.useBH) {
+        if (config.useCUDA) {
+            cudaMemcpyAsync(points, points_d, sizeof(T) * config.N * 2, cudaMemcpyDeviceToHost, memReading);
+            cudaDeviceSynchronize();
+        }
+        if (config.useBH && !config.useCUDA) {
             T maxD = 0;
             for (int i = 0; i < config.N; i++) {
                 if (skip[i]) continue;
@@ -178,9 +188,6 @@ void Simulation<T>::run() {
                 points(i, 0) += vels(i, 0) * config.DeltaT;
                 points(i, 1) += vels(i, 1) * config.DeltaT;
             }
-        }
-        if (config.useCUDA) {
-            cudaMemcpy(points, points_d, sizeof(T) * config.N * 2, cudaMemcpyDeviceToHost);
         }
         if (config.record) {
             rec.write((char*)points, sizeof(T) * config.N * 2);

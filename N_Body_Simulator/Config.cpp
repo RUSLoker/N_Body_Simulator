@@ -66,6 +66,10 @@ void Config::readConfig(char* path) {
 			cfg >> read_capture;
 			config_readed[5] = true;
 		}
+		else if (s == "USE_CUDA:") {
+			cfg >> useCUDA;
+			config_readed[6] = true;
+		}
 	}
 	cfg.close();
 
@@ -95,6 +99,9 @@ void Config::readConfig(char* path) {
 	}
 	if (!config_readed[5]) {
 		cfg << "READ_CAPTURE: " << read_capture << endl;
+	}
+	if (!config_readed[6]) {
+		cfg << "USE_CUDA: " << useCUDA << endl;
 	}
 	cfg.close();
 }

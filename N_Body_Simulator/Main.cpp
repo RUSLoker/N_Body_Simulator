@@ -4,6 +4,7 @@
 #include <thread>
 #include <iomanip>
 #include <fstream>
+#include <sstream>
 #include "BH_tree.cpp"
 #include "omp.h"
 #include "constants.h"
@@ -162,7 +163,8 @@ int main() {
     ContextSettings settings;
     settings.antialiasingLevel = 10;
     window = new RenderWindow(VideoMode(config.W, config.H), "N-body Simulator", Style::Default, settings);
-    window->setVerticalSyncEnabled(true);
+    //window->setVerticalSyncEnabled(true);
+    window->setFramerateLimit(20);
 
     auto start = std::chrono::system_clock::now();
     auto now = chrono::system_clock::now();
@@ -176,7 +178,7 @@ int main() {
     sim = new Simulation<CALCULATION_TYPE>(config);
 
     double frames = 0;
-
+    
     double posX = 0, posY = 0;
 
     VertexArray pixels(Points, config.N);

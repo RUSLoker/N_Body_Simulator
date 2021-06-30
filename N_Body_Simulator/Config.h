@@ -28,9 +28,9 @@ public:
 	string capture_path = capture_dir + "\\capture.cptr";
 	string record_path = record_dir + "\\record.rcd";
 	bool read_capture = true;
-	bool useCUDA = true;
+	bool useCUDA = false;
 
-	static const int configN = 6;
+	static const int configN = 7;
 
 	void readConfig(char* path);
 	void readConfig(const char* path) {
